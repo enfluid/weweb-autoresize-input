@@ -1,5 +1,18 @@
 <template>
-  <div class="autoresize-wrapper">
+  <div 
+    class="autoresize-wrapper"
+    :class="{ 
+      'horizontal-resize': content.autoResizeDirection === 'horizontal' && !content.multiLine,
+      'vertical-resize': content.autoResizeDirection === 'vertical' && content.multiLine 
+    }"
+  >
+    <div 
+      v-if="content.autoResizeDirection === 'horizontal' && !content.multiLine"
+      class="size-detector"
+      :style="sizeDetectorStyle"
+      ref="sizeDetector"
+    >{{ content.value || content.placeholder || 'M' }}</div>
+    
     <component 
       :is="componentType"
       ref="inputElement"
@@ -8,19 +21,13 @@
       @focus="handleFocus"
       @blur="handleBlur"
       :placeholder="content.placeholder || 'Enter text...'"
-      :style="computedStyle"
+      :style="inputStyle"
       :class="['autoresize-input', content.inputClass]"
       :disabled="content.disabled"
       :readonly="content.readonly"
       :maxlength="content.maxLength"
       :rows="componentType === 'textarea' ? (content.rows || 1) : undefined"
     />
-    <span 
-      ref="hiddenMeasurer"
-      class="hidden-measurer"
-      :style="hiddenMeasurerStyle"
-      aria-hidden="true"
-    >{{ measurementText }}</span>
   </div>
 </template>
 
@@ -39,29 +46,15 @@ export default {
   emits: ['update:content', 'trigger-event'],
   data() {
     return {
-      isFocused: false,
-      measuredWidth: 0,
-      measuredHeight: 0,
-      isReady: false
+      isFocused: false
     }
   },
   computed: {
     componentType() {
       return this.content.multiLine ? 'textarea' : 'input'
     },
-    measurementText() {
-      if (this.content.autoResizeDirection === 'horizontal' && !this.content.multiLine) {
-        return this.content.value || this.content.placeholder || 'M'
-      }
-      return ''
-    },
-    hiddenMeasurerStyle() {
+    sizeDetectorStyle() {
       return {
-        position: 'absolute',
-        top: '-9999px',
-        left: '-9999px',
-        visibility: 'hidden',
-        whiteSpace: 'pre',
         fontSize: this.content.fontSize || '16px',
         fontFamily: this.content.fontFamily || 'inherit',
         fontWeight: this.content.fontWeight || 'normal',
@@ -69,11 +62,19 @@ export default {
         padding: this.content.padding || '8px 12px',
         borderWidth: this.content.borderWidth || '1px',
         borderStyle: 'solid',
+        borderColor: 'transparent',
         boxSizing: 'border-box',
-        pointerEvents: 'none'
+        whiteSpace: 'pre',
+        visibility: 'hidden',
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        zIndex: '-1',
+        minWidth: this.content.minWidth || '100px',
+        maxWidth: this.content.maxWidth || '100%'
       }
     },
-    computedStyle() {
+    inputStyle() {
       const style = {
         fontSize: this.content.fontSize || '16px',
         fontFamily: this.content.fontFamily || 'inherit',
@@ -113,81 +114,47 @@ export default {
 
       const direction = this.content.autoResizeDirection || 'horizontal'
 
-      // Handle auto-resizing only if component is ready
-      if (this.isReady) {
-        // Handle horizontal resizing
-        if (direction === 'horizontal' && !this.content.multiLine && this.measuredWidth > 0) {
-          const minWidth = parseInt(this.content.minWidth) || 100
-          const maxWidthValue = this.content.maxWidth || '100%'
-          let maxWidth = 9999
-          
-          if (maxWidthValue.includes('%') && this.$el) {
-            const parent = this.$el.parentElement
-            if (parent) {
-              maxWidth = (parseInt(maxWidthValue) / 100) * parent.offsetWidth
-            }
-          } else {
-            maxWidth = parseInt(maxWidthValue) || 9999
-          }
-          
-          const finalWidth = Math.min(Math.max(this.measuredWidth, minWidth), maxWidth)
-          style.width = `${finalWidth}px`
-        }
-
-        // Handle vertical resizing
-        if (direction === 'vertical' && this.content.multiLine && this.measuredHeight > 0) {
-          const minHeight = parseInt(this.content.minHeight) || 40
-          const maxHeight = parseInt(this.content.maxHeight) || 200
-          const finalHeight = Math.min(Math.max(this.measuredHeight, minHeight), maxHeight)
-          style.height = `${finalHeight}px`
-        }
+      // Handle horizontal auto-resizing with CSS grid approach
+      if (direction === 'horizontal' && !this.content.multiLine) {
+        // Let CSS handle the sizing through grid
+        style.gridArea = '1 / 1'
+        style.width = 'auto'
+        style.minWidth = this.content.minWidth || '100px'
+        style.maxWidth = this.content.maxWidth || '100%'
+      } else {
+        style.width = '100%'
       }
-      
-      // Set default height for single-line inputs
-      if (!this.content.multiLine) {
+
+      // Handle vertical auto-resizing for textareas
+      if (direction === 'vertical' && this.content.multiLine) {
+        style.minHeight = this.content.minHeight || '40px'
+        style.maxHeight = this.content.maxHeight || '200px'
+        style.resize = 'none'
+        style.overflow = 'hidden'
+        
+        // Calculate height based on content
+        const textContent = this.content.value || ''
+        const lines = textContent.split('\n')
+        const lineCount = Math.max(lines.length, 1)
+        
+        const fontSize = parseInt(this.content.fontSize) || 16
+        const lineHeight = this.content.lineHeight === 'normal' ? fontSize * 1.2 : 
+                         (parseFloat(this.content.lineHeight) || 1.2) * fontSize
+        
+        const padding = this.calculatePadding()
+        const border = parseInt(this.content.borderWidth || '1px') * 2
+        const calculatedHeight = (lineCount * lineHeight) + padding.vertical + border
+        
+        const minHeight = parseInt(this.content.minHeight) || 40
+        const maxHeight = parseInt(this.content.maxHeight) || 200
+        const finalHeight = Math.min(Math.max(calculatedHeight, minHeight), maxHeight)
+        
+        style.height = `${finalHeight}px`
+      } else if (!this.content.multiLine) {
         style.height = this.content.inputHeight || '40px'
       }
 
       return style
-    }
-  },
-  mounted() {
-    // Use multiple timing strategies to ensure it works in all environments
-    this.$nextTick(() => {
-      this.initializeMeasurement()
-    })
-    
-    // Also try with a small delay for preview/live environments
-    setTimeout(() => {
-      this.initializeMeasurement()
-    }, 100)
-    
-    // Set up resize observer for container size changes
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.isReady) {
-          this.measureText()
-        }
-      })
-      
-      // Observe the wrapper element for size changes
-      this.$nextTick(() => {
-        if (this.$el) {
-          this.resizeObserver.observe(this.$el)
-        }
-      })
-    }
-  },
-  updated() {
-    if (this.isReady) {
-      this.$nextTick(() => {
-        this.measureText()
-      })
-    }
-  },
-  beforeUnmount() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect()
     }
   },
   methods: {
@@ -209,10 +176,7 @@ export default {
         }
       })
       
-      // Update size after value changes
-      this.$nextTick(() => {
-        this.measureText()
-      })
+      // Auto-resizing will happen automatically through reactive computed properties
     },
     handleFocus(event) {
       this.isFocused = true
@@ -232,47 +196,7 @@ export default {
         }
       })
     },
-    initializeMeasurement() {
-      if (!this.$refs.hiddenMeasurer) return
-      
-      this.isReady = true
-      this.measureText()
-    },
-    measureText() {
-      const direction = this.content.autoResizeDirection || 'horizontal'
-      
-      if (direction === 'none' || !this.isReady) return
-
-      try {
-        // Handle horizontal resizing
-        if (direction === 'horizontal' && !this.content.multiLine) {
-          const measurer = this.$refs.hiddenMeasurer
-          if (measurer && measurer.offsetWidth > 0) {
-            const extraPadding = parseInt(this.content.horizontalPadding) || 10
-            this.measuredWidth = measurer.offsetWidth + extraPadding
-          }
-        }
-
-        // Handle vertical resizing
-        if (direction === 'vertical' && this.content.multiLine) {
-          const textContent = this.content.value || ''
-          const lines = textContent.split('\n')
-          const lineCount = Math.max(lines.length, 1)
-          
-          const fontSize = parseInt(this.content.fontSize) || 16
-          const lineHeight = this.content.lineHeight === 'normal' ? fontSize * 1.2 : 
-                           (parseFloat(this.content.lineHeight) || 1.2) * fontSize
-          
-          const padding = this.extractPadding()
-          const border = parseInt(this.content.borderWidth || '1px') * 2
-          
-          this.measuredHeight = (lineCount * lineHeight) + padding.vertical + border
-        }
-      } catch (error) {
-        console.warn('Auto-resize measurement failed:', error)
-      }
-    },
-    extractPadding() {
+    calculatePadding() {
       const padding = this.content.padding || '8px 12px'
       const parts = padding.split(' ').map(p => parseInt(p) || 0)
       
@@ -286,85 +210,45 @@ export default {
       
       return { vertical: 16, horizontal: 24 }
     }
-  },
-  watch: {
-    'content.value': {
-      handler() {
-        if (this.isReady) {
-          this.$nextTick(() => {
-            this.measureText()
-          })
-        }
-      }
-    },
-    'content.fontSize': {
-      handler() {
-        if (this.isReady) {
-          this.$nextTick(() => {
-            this.measureText()
-          })
-        }
-      }
-    },
-    'content.fontFamily': {
-      handler() {
-        if (this.isReady) {
-          this.$nextTick(() => {
-            this.measureText()
-          })
-        }
-      }
-    },
-    'content.fontWeight': {
-      handler() {
-        if (this.isReady) {
-          this.$nextTick(() => {
-            this.measureText()
-          })
-        }
-      }
-    },
-    'content.padding': {
-      handler() {
-        if (this.isReady) {
-          this.$nextTick(() => {
-            this.measureText()
-          })
-        }
-      }
-    },
-    'content.multiLine': {
-      handler() {
-        if (this.isReady) {
-          this.$nextTick(() => {
-            this.measureText()
-          })
-        }
-      }
-    },
-    'content.autoResizeDirection': {
-      handler() {
-        if (this.isReady) {
-          this.$nextTick(() => {
-            this.measureText()
-          })
-        }
-      }
-    }
   }
 }
 </script>
 
 <style scoped>
 .autoresize-wrapper {
-  position: relative;
   display: inline-block;
+  width: 100%;
+}
+
+/* CSS Grid approach for horizontal auto-sizing */
+.autoresize-wrapper.horizontal-resize {
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  width: auto;
+  min-width: 100px;
+  max-width: 100%;
+}
+
+.autoresize-wrapper.horizontal-resize .autoresize-input {
+  grid-area: 1 / 1;
+  width: auto;
+  min-width: 0;
+}
+
+.autoresize-wrapper.horizontal-resize .size-detector {
+  grid-area: 1 / 1;
+  white-space: pre;
+  overflow: hidden;
+}
+
+.autoresize-wrapper.vertical-resize {
+  display: block;
   width: 100%;
 }
 
 .autoresize-input {
   font-family: inherit;
-  width: 100%;
+  box-sizing: border-box;
 }
 
 .autoresize-input::placeholder {
@@ -377,14 +261,14 @@ export default {
   opacity: 1;
 }
 
-.hidden-measurer {
+.size-detector {
   white-space: pre;
   word-wrap: break-word;
-  position: absolute !important;
-  top: -9999px !important;
-  left: -9999px !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  z-index: -1 !important;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  color: transparent;
+  background: transparent;
+  border-color: transparent;
 }
 </style>
