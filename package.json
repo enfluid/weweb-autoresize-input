@@ -2,13 +2,12 @@
   "name": "weweb-autoresize-input",
   "version": "1.0.0",
   "description": "Auto-resizing input component for WeWeb",
-  "main": "dist/component.js",
+  "license": "MIT",
   "scripts": {
     "build": "weweb build",
     "serve": "weweb serve"
   },
   "devDependencies": {
     "@weweb/cli": "latest"
-  },
-  "dependencies": {}
+  }
 }

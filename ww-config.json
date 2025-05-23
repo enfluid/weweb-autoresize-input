@@ -1,49 +1,40 @@
 {
+  "name": "Autoresize Input",
   "componentPath": "./src/component.vue",
+  "type": "element",
   "editor": {
     "label": {
-      "en": "Auto Resize Input"
+      "en": "Autoresize Input"
     },
-    "icon": "text",
-    "customStylePropertiesOrder": [
-      "minWidth",
-      "maxWidth",
-      "minHeight",
-      "maxHeight",
-      "fontSize",
-      "fontFamily",
-      "padding",
-      "borderRadius",
-      "borderWidth",
-      "borderColor",
-      "backgroundColor",
-      "textColor",
-      "focusBorderColor"
-    ]
+    "icon": "text"
   },
   "properties": {
     "value": {
-      "label": { "en": "Value" },
-      "type": "Text",
+      "label": {
+        "en": "Value"
+      },
+      "type": "Variable",
       "bindable": true,
-      "defaultValue": "",
-      "bindingValidation": {
-        "type": "string",
-        "tooltip": "The input value"
-      }
+      "defaultValue": ""
     },
     "placeholder": {
-      "label": { "en": "Placeholder" },
+      "label": {
+        "en": "Placeholder"
+      },
       "type": "Text",
       "defaultValue": "Enter text..."
     },
     "multiLine": {
-      "label": { "en": "Multi-line" },
+      "label": {
+        "en": "Multi-line"
+      },
       "type": "OnOff",
       "defaultValue": false
     },
     "autoResizeDirection": {
-      "label": { "en": "Auto Resize" },
+      "label": {
+        "en": "Auto Resize"
+      },
       "type": "TextSelect",
       "defaultValue": "horizontal",
       "options": {
@@ -54,101 +45,6 @@
           { "value": "none", "label": { "en": "None" } }
         ]
       }
-    },
-    "minWidth": {
-      "label": { "en": "Min Width" },
-      "type": "Length",
-      "defaultValue": "100px"
-    },
-    "maxWidth": {
-      "label": { "en": "Max Width" },
-      "type": "Length",
-      "defaultValue": "100%"
-    },
-    "minHeight": {
-      "label": { "en": "Min Height" },
-      "type": "Length",
-      "defaultValue": "40px"
-    },
-    "maxHeight": {
-      "label": { "en": "Max Height" },
-      "type": "Length",
-      "defaultValue": "200px"
-    },
-    "fontSize": {
-      "label": { "en": "Font Size" },
-      "type": "Length",
-      "defaultValue": "16px"
-    },
-    "fontFamily": {
-      "label": { "en": "Font Family" },
-      "type": "Text",
-      "defaultValue": "inherit"
-    },
-    "padding": {
-      "label": { "en": "Padding" },
-      "type": "Text",
-      "defaultValue": "8px 12px"
-    },
-    "borderRadius": {
-      "label": { "en": "Border Radius" },
-      "type": "Length",
-      "defaultValue": "4px"
-    },
-    "borderWidth": {
-      "label": { "en": "Border Width" },
-      "type": "Length",
-      "defaultValue": "1px"
-    },
-    "borderColor": {
-      "label": { "en": "Border Color" },
-      "type": "Color",
-      "defaultValue": "#e0e0e0"
-    },
-    "backgroundColor": {
-      "label": { "en": "Background" },
-      "type": "Color",
-      "defaultValue": "#ffffff"
-    },
-    "textColor": {
-      "label": { "en": "Text Color" },
-      "type": "Color",
-      "defaultValue": "#333333"
-    },
-    "focusBorderColor": {
-      "label": { "en": "Focus Border" },
-      "type": "Color",
-      "defaultValue": "#4CAF50"
-    },
-    "disabled": {
-      "label": { "en": "Disabled" },
-      "type": "OnOff",
-      "defaultValue": false
-    },
-    "readonly": {
-      "label": { "en": "Read Only" },
-      "type": "OnOff",
-      "defaultValue": false
-    },
-    "maxLength": {
-      "label": { "en": "Max Length" },
-      "type": "Number",
-      "defaultValue": null
-    },
-    "rows": {
-      "label": { "en": "Rows" },
-      "type": "Number",
-      "defaultValue": 1
-    },
-    "horizontalPadding": {
-      "label": { "en": "H-Padding" },
-      "type": "Number",
-      "defaultValue": 5
-    },
-    "inputClass": {
-      "label": { "en": "CSS Classes" },
-      "type": "Text",
-      "defaultValue": ""
     }
   }
 }
