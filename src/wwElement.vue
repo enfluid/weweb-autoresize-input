@@ -5,14 +5,14 @@
       'horizontal-resize': effectiveAutoResizeDirection === 'horizontal',
       'vertical-resize': effectiveAutoResizeDirection === 'vertical' 
     }"
-    :data-value="content.value || content.placeholder || ''"
   >
-    <div 
+    <span 
       v-if="effectiveAutoResizeDirection === 'horizontal'"
       class="size-detector"
       :style="sizeDetectorStyle"
       ref="sizeDetector"
-    >{{ content.value || content.placeholder || '' }}</div>
+      aria-hidden="true"
+    >{{ content.value || content.placeholder || ' ' }}</span>
     
     <component 
       :is="componentType"
@@ -47,7 +47,8 @@ export default {
   emits: ['update:content', 'trigger-event'],
   data() {
     return {
-      isFocused: false
+      isFocused: false,
+      inputWidth: '100px'
     }
   },
   computed: {
@@ -124,11 +125,9 @@ export default {
         style.backgroundColor = this.content.readonlyBackgroundColor || '#fafafa'
       }
 
-      // Handle horizontal auto-resizing with CSS grid approach
+      // Handle horizontal auto-resizing
       if (this.effectiveAutoResizeDirection === 'horizontal') {
-        // Let CSS handle the sizing through grid
-        style.gridArea = '1 / 1'
-        style.width = 'auto'
+        style.width = this.inputWidth
         style.minWidth = this.content.minWidth || '100px'
         style.maxWidth = this.content.maxWidth || '100%'
       } else {
@@ -152,19 +151,32 @@ export default {
     }
   },
   mounted() {
-    if (this.effectiveAutoResizeDirection === 'vertical') {
-      this.$nextTick(() => {
+    this.$nextTick(() => {
+      if (this.effectiveAutoResizeDirection === 'vertical') {
         this.adjustTextareaHeight()
-      })
-    }
+      } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+        this.adjustInputWidth()
+      }
+    })
   },
   watch: {
     'content.value'() {
-      if (this.effectiveAutoResizeDirection === 'vertical') {
-        this.$nextTick(() => {
+      this.$nextTick(() => {
+        if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
-        })
-      }
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.adjustInputWidth()
+        }
+      })
+    },
+    'effectiveAutoResizeDirection'() {
+      this.$nextTick(() => {
+        if (this.effectiveAutoResizeDirection === 'vertical') {
+          this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.adjustInputWidth()
+        }
+      })
     }
   },
   methods: {
@@ -186,12 +198,31 @@ export default {
         }
       })
       
-      // Handle vertical auto-resize
-      if (this.effectiveAutoResizeDirection === 'vertical') {
-        this.$nextTick(() => {
+      // Handle auto-resize
+      this.$nextTick(() => {
+        if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
-        })
-      }
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.adjustInputWidth()
+        }
+      })
+    },
+    adjustInputWidth() {
+      const sizeDetector = this.$refs.sizeDetector
+      if (!sizeDetector || this.effectiveAutoResizeDirection !== 'horizontal') return
+      
+      // Get the width of the size detector
+      const detectorWidth = sizeDetector.offsetWidth
+      
+      // Add some extra padding for the cursor
+      const extraPadding = parseInt(this.content.horizontalPadding) || 5
+      const newWidth = detectorWidth + extraPadding
+      
+      // Apply min/max constraints
+      const minWidth = parseInt(this.content.minWidth) || 100
+      const maxWidth = this.$el.parentElement ? this.$el.parentElement.offsetWidth : parseInt(this.content.maxWidth) || 9999
+      
+      this.inputWidth = `${Math.min(Math.max(newWidth, minWidth), maxWidth)}px`
     },
     adjustTextareaHeight() {
       const textarea = this.$refs.inputElement
@@ -252,37 +283,29 @@ export default {
   position: relative;
 }
 
-/* CSS Grid approach for horizontal auto-sizing */
+/* Horizontal auto-sizing */
 .autoresize-wrapper.horizontal-resize {
-  display: inline-grid;
-  align-items: center;
+  display: inline-block;
   width: auto;
-  min-width: 100px;
-  max-width: 100%;
-}
-
-.autoresize-wrapper.horizontal-resize::after {
-  content: attr(data-value) ' ';
-  visibility: hidden;
-  white-space: pre;
-  grid-area: 1 / 1;
-  font: inherit;
-  padding: inherit;
-  border: 1px solid transparent;
-  box-sizing: border-box;
+  position: relative;
 }
 
 .autoresize-wrapper.horizontal-resize .autoresize-input {
-  grid-area: 1 / 1;
-  width: 100%;
-  min-width: 0;
+  display: inline-block;
+  transition: width 0.1s ease;
 }
 
 .autoresize-wrapper.horizontal-resize .size-detector {
-  grid-area: 1 / 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
   width: auto;
   white-space: pre;
+  visibility: hidden;
+  pointer-events: none;
   overflow: hidden;
+  z-index: -1;
 }
 
 .autoresize-wrapper.vertical-resize {
@@ -306,13 +329,6 @@ export default {
 }
 
 .size-detector {
-  white-space: pre;
-  word-wrap: break-word;
-  overflow: hidden;
-  pointer-events: none;
-  user-select: none;
-  color: transparent;
-  background: transparent;
-  border-color: transparent;
+  box-sizing: border-box;
 }
 </style>
