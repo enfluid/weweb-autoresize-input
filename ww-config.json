@@ -4,24 +4,356 @@
   "type": "element",
   "editor": {
     "label": {
-      "en": "Autoresize Input"
-    }
+      "en": "Autoresize Input",
+      "fr": "Champ Auto-Redimensionnable"
+    },
+    "icon": "fonticon-text",
+    "customStylePropertiesOrder": [
+      "fontSize",
+      "fontFamily",
+      "fontWeight",
+      "lineHeight",
+      "textColor",
+      "backgroundColor",
+      "padding",
+      "borderRadius",
+      "borderWidth",
+      "borderColor",
+      "focusBorderColor"
+    ]
   },
   "properties": {
     "value": {
       "label": {
-        "en": "Value"
+        "en": "Value",
+        "fr": "Valeur"
       },
       "type": "Variable",
       "bindable": true,
-      "defaultValue": ""
+      "defaultValue": "",
+      "section": "settings",
+      "bindingValidation": {
+        "type": "string",
+        "tooltip": "The input value must be a string"
+      }
     },
     "placeholder": {
       "label": {
-        "en": "Placeholder"
+        "en": "Placeholder",
+        "fr": "Placeholder"
       },
       "type": "Text",
-      "defaultValue": "Type here..."
+      "defaultValue": "Enter text...",
+      "section": "settings"
+    },
+    "multiLine": {
+      "label": {
+        "en": "Multi-line",
+        "fr": "Multi-ligne"
+      },
+      "type": "OnOff",
+      "defaultValue": false,
+      "section": "settings"
+    },
+    "autoResizeDirection": {
+      "label": {
+        "en": "Auto Resize Direction",
+        "fr": "Direction Auto-Redimensionnement"
+      },
+      "type": "TextSelect",
+      "defaultValue": "horizontal",
+      "section": "settings",
+      "options": {
+        "options": [
+          { "value": "horizontal", "label": { "en": "Horizontal" } },
+          { "value": "vertical", "label": { "en": "Vertical" } },
+          { "value": "both", "label": { "en": "Both" } },
+          { "value": "none", "label": { "en": "None" } }
+        ]
+      }
+    },
+    "disabled": {
+      "label": {
+        "en": "Disabled",
+        "fr": "Désactivé"
+      },
+      "type": "OnOff",
+      "defaultValue": false,
+      "section": "settings"
+    },
+    "readonly": {
+      "label": {
+        "en": "Read Only",
+        "fr": "Lecture Seule"
+      },
+      "type": "OnOff",
+      "defaultValue": false,
+      "section": "settings"
+    },
+    "maxLength": {
+      "label": {
+        "en": "Max Length",
+        "fr": "Longueur Max"
+      },
+      "type": "Number",
+      "defaultValue": null,
+      "section": "settings",
+      "options": {
+        "min": 0,
+        "max": 9999
+      }
+    },
+    "rows": {
+      "label": {
+        "en": "Initial Rows (Multi-line)",
+        "fr": "Lignes Initiales"
+      },
+      "type": "Number",
+      "defaultValue": 1,
+      "section": "settings",
+      "options": {
+        "min": 1,
+        "max": 20
+      },
+      "hidden": "!content.multiLine"
+    },
+    "horizontalPadding": {
+      "label": {
+        "en": "Horizontal Padding",
+        "fr": "Padding Horizontal"
+      },
+      "type": "Number",
+      "defaultValue": 5,
+      "section": "settings",
+      "options": {
+        "min": 0,
+        "max": 50
+      },
+      "hidden": "content.multiLine || content.autoResizeDirection === 'vertical' || content.autoResizeDirection === 'none'"
+    },
+    "minWidth": {
+      "label": {
+        "en": "Min Width",
+        "fr": "Largeur Min"
+      },
+      "type": "Length",
+      "defaultValue": "100px",
+      "section": "layout"
+    },
+    "maxWidth": {
+      "label": {
+        "en": "Max Width",
+        "fr": "Largeur Max"
+      },
+      "type": "Length",
+      "defaultValue": "100%",
+      "section": "layout"
+    },
+    "minHeight": {
+      "label": {
+        "en": "Min Height",
+        "fr": "Hauteur Min"
+      },
+      "type": "Length",
+      "defaultValue": "40px",
+      "section": "layout",
+      "hidden": "!content.multiLine"
+    },
+    "maxHeight": {
+      "label": {
+        "en": "Max Height",
+        "fr": "Hauteur Max"
+      },
+      "type": "Length",
+      "defaultValue": "200px",
+      "section": "layout",
+      "hidden": "!content.multiLine"
+    },
+    "inputHeight": {
+      "label": {
+        "en": "Input Height",
+        "fr": "Hauteur du Champ"
+      },
+      "type": "Length",
+      "defaultValue": "40px",
+      "section": "layout",
+      "hidden": "content.multiLine"
+    },
+    "fontSize": {
+      "label": {
+        "en": "Font Size",
+        "fr": "Taille Police"
+      },
+      "type": "Length",
+      "defaultValue": "16px",
+      "section": "style"
+    },
+    "fontFamily": {
+      "label": {
+        "en": "Font Family",
+        "fr": "Police"
+      },
+      "type": "FontFamily",
+      "defaultValue": "inherit",
+      "section": "style"
+    },
+    "fontWeight": {
+      "label": {
+        "en": "Font Weight",
+        "fr": "Épaisseur Police"
+      },
+      "type": "TextSelect",
+      "defaultValue": "normal",
+      "section": "style",
+      "options": {
+        "options": [
+          { "value": "normal", "label": { "en": "Normal" } },
+          { "value": "bold", "label": { "en": "Bold" } },
+          { "value": "100", "label": { "en": "100 - Thin" } },
+          { "value": "200", "label": { "en": "200 - Extra Light" } },
+          { "value": "300", "label": { "en": "300 - Light" } },
+          { "value": "400", "label": { "en": "400 - Normal" } },
+          { "value": "500", "label": { "en": "500 - Medium" } },
+          { "value": "600", "label": { "en": "600 - Semi Bold" } },
+          { "value": "700", "label": { "en": "700 - Bold" } },
+          { "value": "800", "label": { "en": "800 - Extra Bold" } },
+          { "value": "900", "label": { "en": "900 - Black" } }
+        ]
+      }
+    },
+    "lineHeight": {
+      "label": {
+        "en": "Line Height",
+        "fr": "Hauteur de Ligne"
+      },
+      "type": "Length",
+      "defaultValue": "normal",
+      "section": "style"
+    },
+    "padding": {
+      "label": {
+        "en": "Padding",
+        "fr": "Espacement Interne"
+      },
+      "type": "Length",
+      "defaultValue": "8px 12px",
+      "section": "style"
+    },
+    "borderRadius": {
+      "label": {
+        "en": "Border Radius",
+        "fr": "Rayon de Bordure"
+      },
+      "type": "Length",
+      "defaultValue": "4px",
+      "section": "style"
+    },
+    "borderWidth": {
+      "label": {
+        "en": "Border Width",
+        "fr": "Épaisseur Bordure"
+      },
+      "type": "Length",
+      "defaultValue": "1px",
+      "section": "style"
+    },
+    "borderColor": {
+      "label": {
+        "en": "Border Color",
+        "fr": "Couleur Bordure"
+      },
+      "type": "Color",
+      "defaultValue": "#e0e0e0",
+      "section": "style"
+    },
+    "backgroundColor": {
+      "label": {
+        "en": "Background Color",
+        "fr": "Couleur de Fond"
+      },
+      "type": "Color",
+      "defaultValue": "#ffffff",
+      "section": "style"
+    },
+    "textColor": {
+      "label": {
+        "en": "Text Color",
+        "fr": "Couleur du Texte"
+      },
+      "type": "Color",
+      "defaultValue": "#333333",
+      "section": "style"
+    },
+    "focusBorderColor": {
+      "label": {
+        "en": "Focus Border Color",
+        "fr": "Couleur Bordure Focus"
+      },
+      "type": "Color",
+      "defaultValue": "#4CAF50",
+      "section": "style"
+    },
+    "disabledBackgroundColor": {
+      "label": {
+        "en": "Disabled Background",
+        "fr": "Fond Désactivé"
+      },
+      "type": "Color",
+      "defaultValue": "#f5f5f5",
+      "section": "style",
+      "hidden": "!content.disabled"
+    },
+    "readonlyBackgroundColor": {
+      "label": {
+        "en": "Readonly Background",
+        "fr": "Fond Lecture Seule"
+      },
+      "type": "Color",
+      "defaultValue": "#fafafa",
+      "section": "style",
+      "hidden": "!content.readonly"
+    },
+    "inputClass": {
+      "label": {
+        "en": "CSS Classes",
+        "fr": "Classes CSS"
+      },
+      "type": "Text",
+      "defaultValue": "",
+      "section": "attributes"
     }
-  }
+  },
+  "triggerEvents": [
+    {
+      "name": "input",
+      "label": {
+        "en": "On input",
+        "fr": "Sur saisie"
+      },
+      "event": {
+        "value": "string",
+        "length": "number"
+      }
+    },
+    {
+      "name": "focus",
+      "label": {
+        "en": "On focus",
+        "fr": "Sur focus"
+      },
+      "event": {
+        "value": "string"
+      }
+    },
+    {
+      "name": "blur",
+      "label": {
+        "en": "On blur",
+        "fr": "Sur blur"
+      },
+      "event": {
+        "value": "string"
+      }
+    }
+  ]
 }
