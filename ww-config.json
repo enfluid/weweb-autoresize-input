@@ -67,7 +67,6 @@
         "options": [
           { "value": "horizontal", "label": { "en": "Horizontal" } },
           { "value": "vertical", "label": { "en": "Vertical" } },
-          { "value": "both", "label": { "en": "Both" } },
           { "value": "none", "label": { "en": "None" } }
         ]
       }

@@ -34,7 +34,8 @@ export default {
       inputWidth: null,
       inputHeight: null,
       isFocused: false,
-      measurementDiv: null
+      measurementCanvas: null,
+      canvasContext: null
     }
   },
   computed: {
@@ -82,14 +83,14 @@ export default {
       const direction = this.content.autoResizeDirection || 'horizontal'
 
       // Handle horizontal resizing
-      if ((direction === 'horizontal' || direction === 'both') && !this.content.multiLine) {
+      if (direction === 'horizontal' && !this.content.multiLine) {
         if (this.inputWidth !== null) {
           style.width = `${this.inputWidth}px`
         }
       }
 
       // Handle vertical resizing
-      if ((direction === 'vertical' || direction === 'both') && this.content.multiLine) {
+      if (direction === 'vertical' && this.content.multiLine) {
         style.minHeight = this.content.minHeight || '40px'
         style.maxHeight = this.content.maxHeight || '200px'
         if (this.inputHeight !== null) {
@@ -104,14 +105,28 @@ export default {
     }
   },
   mounted() {
-    this.createMeasurementDiv()
+    this.createMeasurementCanvas()
     this.$nextTick(() => {
       this.updateSize()
     })
+    
+    // Add resize observer to handle container size changes
+    if (window.ResizeObserver) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.$nextTick(() => {
+          this.updateSize()
+        })
+      })
+      
+      if (this.$el.parentElement) {
+        this.resizeObserver.observe(this.$el.parentElement)
+      }
+    }
   },
   beforeUnmount() {
-    if (this.measurementDiv && this.measurementDiv.parentNode) {
-      this.measurementDiv.parentNode.removeChild(this.measurementDiv)
+    // Clean up resize observer
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
     }
   },
   methods: {
@@ -156,94 +171,147 @@ export default {
         }
       })
     },
-    createMeasurementDiv() {
-      // Create a hidden div for measuring text dimensions
-      this.measurementDiv = document.createElement('div')
-      this.measurementDiv.style.position = 'absolute'
-      this.measurementDiv.style.top = '-9999px'
-      this.measurementDiv.style.left = '-9999px'
-      this.measurementDiv.style.visibility = 'hidden'
-      this.measurementDiv.style.whiteSpace = this.content.multiLine ? 'pre-wrap' : 'pre'
-      this.measurementDiv.style.wordWrap = 'break-word'
-      this.measurementDiv.style.overflow = 'hidden'
-      
-      // Copy text styles
-      this.updateMeasurementDivStyles()
-      
-      document.body.appendChild(this.measurementDiv)
+    createMeasurementCanvas() {
+      // Create a canvas for measuring text dimensions
+      this.measurementCanvas = document.createElement('canvas')
+      this.canvasContext = this.measurementCanvas.getContext('2d')
     },
-    updateMeasurementDivStyles() {
-      if (!this.measurementDiv) return
+    updateCanvasFont() {
+      if (!this.canvasContext) return
       
-      // Copy all relevant styles for accurate measurement
-      this.measurementDiv.style.fontSize = this.content.fontSize || '16px'
-      this.measurementDiv.style.fontFamily = this.content.fontFamily || 'inherit'
-      this.measurementDiv.style.fontWeight = this.content.fontWeight || 'normal'
-      this.measurementDiv.style.lineHeight = this.content.lineHeight || 'normal'
-      this.measurementDiv.style.padding = this.content.padding || '8px 12px'
-      this.measurementDiv.style.borderWidth = this.content.borderWidth || '1px'
-      this.measurementDiv.style.borderStyle = 'solid'
-      this.measurementDiv.style.boxSizing = 'border-box'
+      const fontSize = this.content.fontSize || '16px'
+      const fontFamily = this.content.fontFamily || 'Arial, sans-serif'
+      const fontWeight = this.content.fontWeight || 'normal'
+      
+      this.canvasContext.font = `${fontWeight} ${fontSize} ${fontFamily}`
     },
     updateSize() {
       const direction = this.content.autoResizeDirection || 'horizontal'
       if (direction === 'none') return
 
       const inputEl = this.$refs.inputElement
-      if (!inputEl || !this.measurementDiv) return
+      if (!inputEl || !this.canvasContext) return
 
-      // Update measurement div content
+      this.updateCanvasFont()
+
+      // Get the text to measure
       const textContent = this.content.value || this.content.placeholder || ''
-      this.measurementDiv.textContent = textContent
 
-      // For empty input, use placeholder for width calculation
-      if (!this.content.value && this.content.placeholder) {
-        this.measurementDiv.textContent = this.content.placeholder
-      }
-
-      // Handle horizontal resizing
-      if ((direction === 'horizontal' || direction === 'both') && !this.content.multiLine) {
-        // Add some padding to prevent text cutoff
-        const horizontalPadding = this.content.horizontalPadding || 5
-        const measuredWidth = this.measurementDiv.scrollWidth + horizontalPadding
+      // Handle horizontal resizing for single-line inputs
+      if (direction === 'horizontal' && !this.content.multiLine) {
+        const textMetrics = this.canvasContext.measureText(textContent)
+        const textWidth = textMetrics.width
+        
+        // Add CSS padding and extra padding for better visual appearance
+        const cssPadding = this.getPaddingHorizontal()
+        const extraPadding = this.content.horizontalPadding || 10
+        const borderWidth = parseInt(this.content.borderWidth || '1px') * 2
+        const measuredWidth = textWidth + cssPadding + extraPadding + borderWidth
         
         // Apply min/max constraints
-        const minWidth = parseInt(this.content.minWidth || '100')
-        const maxWidth = this.getMaxWidthInPixels()
+        const minWidth = this.parseLength(this.content.minWidth || '100px')
+        const maxWidth = this.parseLength(this.content.maxWidth || '100%', inputEl.parentElement)
         
         this.inputWidth = Math.min(Math.max(measuredWidth, minWidth), maxWidth)
       }
 
-      // Handle vertical resizing
-      if ((direction === 'vertical' || direction === 'both') && this.content.multiLine) {
-        // Set width for proper text wrapping calculation
-        const inputWidth = inputEl.offsetWidth
-        this.measurementDiv.style.width = `${inputWidth}px`
+      // Handle vertical resizing for multi-line inputs
+      if (direction === 'vertical' && this.content.multiLine) {
+        // For textarea, we need to measure based on line breaks and text wrapping
+        const lineHeight = this.getLineHeight()
+        const padding = this.getPaddingVertical()
+        const borderWidth = parseInt(this.content.borderWidth || '1px') * 2
         
-        // Measure height
-        const measuredHeight = this.measurementDiv.scrollHeight
+        // Calculate number of lines including wrapped lines
+        const inputWidth = inputEl.offsetWidth || 200
+        const contentWidth = inputWidth - this.getPaddingHorizontal() - borderWidth
+        
+        let totalLines = 0
+        const lines = textContent.split('\n')
+        
+        for (const line of lines) {
+          if (line === '') {
+            totalLines += 1
+          } else {
+            const lineMetrics = this.canvasContext.measureText(line)
+            const wrappedLines = Math.ceil(lineMetrics.width / contentWidth) || 1
+            totalLines += wrappedLines
+          }
+        }
+        
+        // Ensure at least one line for empty content
+        if (totalLines === 0) totalLines = 1
+        
+        // Calculate height based on number of lines
+        const measuredHeight = (totalLines * lineHeight) + padding + borderWidth
         
         // Apply min/max constraints
-        const minHeight = parseInt(this.content.minHeight || '40')
-        const maxHeight = parseInt(this.content.maxHeight || '200')
+        const minHeight = this.parseLength(this.content.minHeight || '40px')
+        const maxHeight = this.parseLength(this.content.maxHeight || '200px')
         
         this.inputHeight = Math.min(Math.max(measuredHeight, minHeight), maxHeight)
       }
     },
-    getMaxWidthInPixels() {
-      // Convert percentage or other units to pixels
-      const maxWidth = this.content.maxWidth || '100%'
+    parseLength(value, parentElement = null) {
+      if (!value) return 0
       
-      if (maxWidth.endsWith('%')) {
-        const percentage = parseFloat(maxWidth) / 100
-        const parentWidth = this.$el.parentElement ? this.$el.parentElement.offsetWidth : window.innerWidth
+      if (typeof value === 'number') return value
+      
+      if (value.endsWith('px')) {
+        return parseInt(value)
+      } else if (value.endsWith('%')) {
+        const percentage = parseFloat(value) / 100
+        const parentWidth = parentElement ? parentElement.offsetWidth : (this.$el?.parentElement?.offsetWidth || window.innerWidth)
         return parentWidth * percentage
-      } else if (maxWidth.endsWith('vw')) {
-        const vw = parseFloat(maxWidth) / 100
+      } else if (value.endsWith('vw')) {
+        const vw = parseFloat(value) / 100
         return window.innerWidth * vw
+      } else if (value.endsWith('vh')) {
+        const vh = parseFloat(value) / 100
+        return window.innerHeight * vh
       } else {
-        return parseInt(maxWidth) || 9999
+        return parseInt(value) || 0
       }
+    },
+    getLineHeight() {
+      const lineHeight = this.content.lineHeight || '1.2'
+      const fontSize = parseInt(this.content.fontSize || '16px')
+      
+      if (lineHeight === 'normal') {
+        return fontSize * 1.2
+      } else if (lineHeight.endsWith('px')) {
+        return parseInt(lineHeight)
+      } else {
+        return fontSize * parseFloat(lineHeight)
+      }
+    },
+    getPaddingVertical() {
+      const padding = this.content.padding || '8px 12px'
+      const parts = padding.split(' ')
+      
+      if (parts.length === 1) {
+        return parseInt(parts[0]) * 2
+      } else if (parts.length === 2) {
+        return parseInt(parts[0]) * 2
+      } else if (parts.length === 4) {
+        return parseInt(parts[0]) + parseInt(parts[2])
+      }
+      
+      return 16 // default fallback
+    },
+    getPaddingHorizontal() {
+      const padding = this.content.padding || '8px 12px'
+      const parts = padding.split(' ')
+      
+      if (parts.length === 1) {
+        return parseInt(parts[0]) * 2
+      } else if (parts.length === 2) {
+        return parseInt(parts[1]) * 2
+      } else if (parts.length === 4) {
+        return parseInt(parts[1]) + parseInt(parts[3])
+      }
+      
+      return 24 // default fallback
     }
   },
   watch: {
@@ -253,20 +321,24 @@ export default {
       })
     },
     'content.fontSize'() {
-      this.updateMeasurementDivStyles()
-      this.updateSize()
+      this.$nextTick(() => {
+        this.updateSize()
+      })
     },
     'content.fontFamily'() {
-      this.updateMeasurementDivStyles()
-      this.updateSize()
+      this.$nextTick(() => {
+        this.updateSize()
+      })
     },
     'content.fontWeight'() {
-      this.updateMeasurementDivStyles()
-      this.updateSize()
+      this.$nextTick(() => {
+        this.updateSize()
+      })
     },
     'content.padding'() {
-      this.updateMeasurementDivStyles()
-      this.updateSize()
+      this.$nextTick(() => {
+        this.updateSize()
+      })
     },
     'content.multiLine'() {
       this.$nextTick(() => {
