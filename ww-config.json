@@ -1,14 +1,27 @@
 {
-  "name": "Simple Input",
-  "componentPath": "./src/component.vue",
+  "name": "Autoresize Input",
+  "componentPath": "./src/wwElement.vue",
   "type": "element",
+  "editor": {
+    "label": {
+      "en": "Autoresize Input"
+    }
+  },
   "properties": {
     "value": {
+      "label": {
+        "en": "Value"
+      },
       "type": "Variable",
-      "bindable": true
+      "bindable": true,
+      "defaultValue": ""
     },
     "placeholder": {
-      "type": "Text"
+      "label": {
+        "en": "Placeholder"
+      },
+      "type": "Text",
+      "defaultValue": "Type here..."
     }
   }
 }
