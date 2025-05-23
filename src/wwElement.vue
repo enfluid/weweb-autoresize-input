@@ -209,20 +209,41 @@ export default {
     },
     adjustInputWidth() {
       const sizeDetector = this.$refs.sizeDetector
-      if (!sizeDetector || this.effectiveAutoResizeDirection !== 'horizontal') return
+      const input = this.$refs.inputElement
+      if (!sizeDetector || !input || this.effectiveAutoResizeDirection !== 'horizontal') return
       
-      // Get the width of the size detector
-      const detectorWidth = sizeDetector.offsetWidth
+      // Create a temporary canvas to measure text width accurately
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
       
-      // Add some extra padding for the cursor
+      // Get computed styles from the input
+      const computedStyle = window.getComputedStyle(input)
+      const fontSize = computedStyle.fontSize
+      const fontFamily = computedStyle.fontFamily
+      const fontWeight = computedStyle.fontWeight
+      
+      // Set the font on the canvas context
+      context.font = `${fontWeight} ${fontSize} ${fontFamily}`
+      
+      // Measure the text
+      const text = this.content.value || this.content.placeholder || ''
+      const textWidth = context.measureText(text).width
+      
+      // Get padding values
+      const paddingLeft = parseInt(computedStyle.paddingLeft) || 0
+      const paddingRight = parseInt(computedStyle.paddingRight) || 0
+      const borderLeft = parseInt(computedStyle.borderLeftWidth) || 0
+      const borderRight = parseInt(computedStyle.borderRightWidth) || 0
+      
+      // Calculate total width needed
       const extraPadding = parseInt(this.content.horizontalPadding) || 5
-      const newWidth = detectorWidth + extraPadding
+      const totalWidth = Math.ceil(textWidth) + paddingLeft + paddingRight + borderLeft + borderRight + extraPadding
       
       // Apply min/max constraints
       const minWidth = parseInt(this.content.minWidth) || 100
       const maxWidth = this.$el.parentElement ? this.$el.parentElement.offsetWidth : parseInt(this.content.maxWidth) || 9999
       
-      this.inputWidth = `${Math.min(Math.max(newWidth, minWidth), maxWidth)}px`
+      this.inputWidth = `${Math.min(Math.max(totalWidth, minWidth), maxWidth)}px`
     },
     adjustTextareaHeight() {
       const textarea = this.$refs.inputElement
@@ -292,7 +313,6 @@ export default {
 
 .autoresize-wrapper.horizontal-resize .autoresize-input {
   display: inline-block;
-  transition: width 0.1s ease;
 }
 
 .autoresize-wrapper.horizontal-resize .size-detector {
