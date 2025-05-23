@@ -53,7 +53,8 @@
       },
       "type": "OnOff",
       "defaultValue": false,
-      "section": "settings"
+      "section": "settings",
+      "hidden": "content.autoResizeDirection === 'horizontal' || content.autoResizeDirection === 'vertical'"
     },
     "autoResizeDirection": {
       "label": {
