@@ -1,0 +1,10 @@
+{
+  "name": "weweb-autoresize-input",
+  "version": "1.0.0",
+  "description": "Auto-resizing input component for WeWeb",
+  "main": "src/component.vue",
+  "scripts": {},
+  "devDependencies": {
+    "@weweb/cli": "latest"
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "name": "Auto Resize Input",
+  "componentPath": "./src/component.vue",
+  "type": "element",
+  "editor": {
+    "label": "Auto Resize Input",
+    "icon": "fontawesome/solid/keyboard"
+  },
+  "properties": {
+    "value": {
+      "label": "Value",
+      "type": "Text",
+      "bindable": true,
+      "defaultValue": ""
+    },
+    "placeholder": {
+      "label": "Placeholder",
+      "type": "Text",
+      "defaultValue": "Enter text..."
+    },
+    "multiLine": {
+      "label": "Multi-line",
+      "type": "OnOff",
+      "defaultValue": false
+    },
+    "autoResizeDirection": {
+      "label": "Auto Resize Direction",
+      "type": "TextSelect",
+      "defaultValue": "horizontal",
+      "options": {
+        "choices": [
+          { "value": "horizontal", "label": "Horizontal" },
+          { "value": "vertical", "label": "Vertical" },
+          { "value": "both", "label": "Both" },
+          { "value": "none", "label": "None" }
+        ]
+      }
+    },
+    "minWidth": {
+      "label": "Min Width",
+      "type": "Text",
+      "defaultValue": "100px"
+    },
+    "maxWidth": {
+      "label": "Max Width",
+      "type": "Text",
+      "defaultValue": "100%"
+    },
+    "minHeight": {
+      "label": "Min Height",
+      "type": "Text",
+      "defaultValue": "40px"
+    },
+    "maxHeight": {
+      "label": "Max Height",
+      "type": "Text",
+      "defaultValue": "200px"
+    },
+    "fontSize": {
+      "label": "Font Size",
+      "type": "Text",
+      "defaultValue": "16px"
+    },
+    "fontFamily": {
+      "label": "Font Family",
+      "type": "Text",
+      "defaultValue": "inherit"
+    },
+    "padding": {
+      "label": "Padding",
+      "type": "Text",
+      "defaultValue": "8px 12px"
+    },
+    "borderRadius": {
+      "label": "Border Radius",
+      "type": "Text",
+      "defaultValue": "4px"
+    },
+    "borderColor": {
+      "label": "Border Color",
+      "type": "Color",
+      "defaultValue": "#e0e0e0"
+    },
+    "borderWidth": {
+      "label": "Border Width",
+      "type": "Text",
+      "defaultValue": "1px"
+    },
+    "backgroundColor": {
+      "label": "Background Color",
+      "type": "Color",
+      "defaultValue": "#ffffff"
+    },
+    "textColor": {
+      "label": "Text Color",
+      "type": "Color",
+      "defaultValue": "#333333"
+    },
+    "focusBorderColor": {
+      "label": "Focus Border Color",
+      "type": "Color",
+      "defaultValue": "#4CAF50"
+    },
+    "disabled": {
+      "label": "Disabled",
+      "type": "OnOff",
+      "defaultValue": false
+    },
+    "readonly": {
+      "label": "Read Only",
+      "type": "OnOff",
+      "defaultValue": false
+    },
+    "maxLength": {
+      "label": "Max Length",
+      "type": "Number",
+      "defaultValue": null
+    },
+    "rows": {
+      "label": "Rows (Multi-line)",
+      "type": "Number",
+      "defaultValue": 1
+    },
+    "horizontalPadding": {
+      "label": "Horizontal Padding",
+      "type": "Number",
+      "defaultValue": 5
+    },
+    "inputClass": {
+      "label": "CSS Classes",
+      "type": "Text",
+      "defaultValue": ""
+    }
+  }
+}
