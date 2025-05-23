@@ -48,7 +48,7 @@ export default {
   data() {
     return {
       isFocused: false,
-      inputWidth: '100px'
+      inputWidth: 'auto'
     }
   },
   computed: {
@@ -82,7 +82,7 @@ export default {
         top: '0',
         left: '0',
         zIndex: '-1',
-        minWidth: this.content.minWidth || '100px',
+        minWidth: this.content.minWidth || '0px',
         maxWidth: this.content.maxWidth || '100%',
         pointerEvents: 'none'
       }
@@ -102,13 +102,13 @@ export default {
           : (this.content.borderColor || '#e0e0e0'),
         backgroundColor: this.content.backgroundColor || '#ffffff',
         color: this.content.textColor || '#333333',
-        transition: 'all 0.2s ease',
+        transition: 'border-color 0.2s ease',
         resize: 'none',
         overflow: 'hidden',
         boxSizing: 'border-box',
         outline: 'none',
         width: '100%',
-        minWidth: this.content.minWidth || '100px',
+        minWidth: this.content.minWidth || '0px',
         maxWidth: this.content.maxWidth || '100%'
       }
 
@@ -151,13 +151,45 @@ export default {
     }
   },
   mounted() {
+    // Handle initial sizing with a delay to ensure DOM is ready in preview mode
     this.$nextTick(() => {
-      if (this.effectiveAutoResizeDirection === 'vertical') {
-        this.adjustTextareaHeight()
-      } else if (this.effectiveAutoResizeDirection === 'horizontal') {
-        this.adjustInputWidth()
-      }
+      // Additional timeout for WeWeb preview mode compatibility
+      setTimeout(() => {
+        if (this.effectiveAutoResizeDirection === 'vertical') {
+          this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.adjustInputWidth()
+        }
+      }, 50)
     })
+    
+    // Also listen for font load events which can affect measurements
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.adjustInputWidth()
+        }
+      })
+    }
+    
+    // Handle visibility changes (useful for tabs, modals, etc)
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.visibilityObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && this.effectiveAutoResizeDirection === 'horizontal') {
+            this.$nextTick(() => {
+              this.adjustInputWidth()
+            })
+          }
+        })
+      })
+      this.visibilityObserver.observe(this.$el)
+    }
+  },
+  beforeUnmount() {
+    if (this.visibilityObserver) {
+      this.visibilityObserver.disconnect()
+    }
   },
   watch: {
     'content.value'() {
@@ -212,38 +244,51 @@ export default {
       const input = this.$refs.inputElement
       if (!sizeDetector || !input || this.effectiveAutoResizeDirection !== 'horizontal') return
       
-      // Create a temporary canvas to measure text width accurately
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-      
-      // Get computed styles from the input
-      const computedStyle = window.getComputedStyle(input)
-      const fontSize = computedStyle.fontSize
-      const fontFamily = computedStyle.fontFamily
-      const fontWeight = computedStyle.fontWeight
-      
-      // Set the font on the canvas context
-      context.font = `${fontWeight} ${fontSize} ${fontFamily}`
-      
-      // Measure the text
-      const text = this.content.value || this.content.placeholder || ''
-      const textWidth = context.measureText(text).width
-      
-      // Get padding values
-      const paddingLeft = parseInt(computedStyle.paddingLeft) || 0
-      const paddingRight = parseInt(computedStyle.paddingRight) || 0
-      const borderLeft = parseInt(computedStyle.borderLeftWidth) || 0
-      const borderRight = parseInt(computedStyle.borderRightWidth) || 0
-      
-      // Calculate total width needed
-      const extraPadding = parseInt(this.content.horizontalPadding) || 5
-      const totalWidth = Math.ceil(textWidth) + paddingLeft + paddingRight + borderLeft + borderRight + extraPadding
-      
-      // Apply min/max constraints
-      const minWidth = parseInt(this.content.minWidth) || 100
-      const maxWidth = this.$el.parentElement ? this.$el.parentElement.offsetWidth : parseInt(this.content.maxWidth) || 9999
-      
-      this.inputWidth = `${Math.min(Math.max(totalWidth, minWidth), maxWidth)}px`
+      try {
+        // Create a temporary canvas to measure text width accurately
+        const canvas = document.createElement('canvas')
+        const context = canvas.getContext('2d')
+        
+        // Get computed styles from the input
+        const computedStyle = window.getComputedStyle(input)
+        const fontSize = computedStyle.fontSize || '16px'
+        const fontFamily = computedStyle.fontFamily || 'inherit'
+        const fontWeight = computedStyle.fontWeight || 'normal'
+        
+        // Set the font on the canvas context
+        context.font = `${fontWeight} ${fontSize} ${fontFamily}`
+        
+        // Measure the text
+        const text = this.content.value || this.content.placeholder || ''
+        const textWidth = context.measureText(text).width
+        
+        // Get padding values
+        const paddingLeft = parseInt(computedStyle.paddingLeft) || 0
+        const paddingRight = parseInt(computedStyle.paddingRight) || 0
+        const borderLeft = parseInt(computedStyle.borderLeftWidth) || 0
+        const borderRight = parseInt(computedStyle.borderRightWidth) || 0
+        
+        // Calculate total width needed
+        const extraPadding = parseInt(this.content.horizontalPadding) || 5
+        const totalWidth = Math.ceil(textWidth) + paddingLeft + paddingRight + borderLeft + borderRight + extraPadding
+        
+        // Apply min/max constraints
+        const minWidth = parseInt(this.content.minWidth) || 0
+        
+        // More defensive max width calculation
+        let maxWidth = 9999
+        if (this.content.maxWidth && this.content.maxWidth !== '100%') {
+          maxWidth = parseInt(this.content.maxWidth) || 9999
+        } else if (this.$el && this.$el.parentElement) {
+          maxWidth = this.$el.parentElement.offsetWidth || 9999
+        }
+        
+        this.inputWidth = `${Math.min(Math.max(totalWidth, minWidth), maxWidth)}px`
+      } catch (error) {
+        console.error('Error adjusting input width:', error)
+        // Fallback to auto width
+        this.inputWidth = 'auto'
+      }
     },
     adjustTextareaHeight() {
       const textarea = this.$refs.inputElement
