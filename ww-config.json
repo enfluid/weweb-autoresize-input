@@ -1,50 +1,14 @@
 {
-  "name": "Autoresize Input",
+  "name": "Simple Input",
   "componentPath": "./src/component.vue",
   "type": "element",
-  "editor": {
-    "label": {
-      "en": "Autoresize Input"
-    },
-    "icon": "text"
-  },
   "properties": {
     "value": {
-      "label": {
-        "en": "Value"
-      },
       "type": "Variable",
-      "bindable": true,
-      "defaultValue": ""
+      "bindable": true
     },
     "placeholder": {
-      "label": {
-        "en": "Placeholder"
-      },
-      "type": "Text",
-      "defaultValue": "Enter text..."
-    },
-    "multiLine": {
-      "label": {
-        "en": "Multi-line"
-      },
-      "type": "OnOff",
-      "defaultValue": false
-    },
-    "autoResizeDirection": {
-      "label": {
-        "en": "Auto Resize"
-      },
-      "type": "TextSelect",
-      "defaultValue": "horizontal",
-      "options": {
-        "options": [
-          { "value": "horizontal", "label": { "en": "Horizontal" } },
-          { "value": "vertical", "label": { "en": "Vertical" } },
-          { "value": "both", "label": { "en": "Both" } },
-          { "value": "none", "label": { "en": "None" } }
-        ]
-      }
+      "type": "Text"
     }
   }
 }
