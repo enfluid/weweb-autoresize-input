@@ -26,7 +26,7 @@
     <textarea
       v-else-if="effectiveAutoResizeDirection === 'vertical'"
       ref="inputElement"
-      :value="content.value || ''"
+      v-model="localValue"
       @input="handleInput"
       @focus="handleFocus"
       @blur="handleBlur"
@@ -72,7 +72,8 @@ export default {
   data() {
     return {
       isFocused: false,
-      debounceTimer: null
+      debounceTimer: null,
+      localValue: ''
     }
   },
   computed: {
@@ -160,6 +161,9 @@ export default {
     }
   },
   mounted() {
+    // Initialize local value
+    this.localValue = this.content.value || ''
+    
     // Handle initial sizing with a delay to ensure DOM is ready in preview mode
     this.$nextTick(() => {
       // Additional timeout for WeWeb preview mode compatibility
@@ -177,9 +181,26 @@ export default {
     })
   },
   watch: {
-    'content.value'() {
+    'content.value'(newValue, oldValue) {
+      console.log('[DEBUG] content.value watcher triggered', {
+        oldValue,
+        newValue,
+        effectiveAutoResizeDirection: this.effectiveAutoResizeDirection
+      })
+      
+      // Update local value
+      this.localValue = newValue || ''
+      
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
+          const textarea = this.$refs.inputElement
+          console.log('[DEBUG] Vertical mode value changed', {
+            textareaValue: textarea?.value,
+            contentValue: this.content.value,
+            newValue,
+            localValue: this.localValue
+          })
+          
           this.adjustTextareaHeight()
         } else if (this.effectiveAutoResizeDirection === 'horizontal') {
           // Update contenteditable if value changed externally
@@ -201,6 +222,14 @@ export default {
   methods: {
     handleInput(event) {
       const newValue = event.target.value
+      console.log('[DEBUG] handleInput called', {
+        newValue,
+        oldLocalValue: this.localValue,
+        effectiveAutoResizeDirection: this.effectiveAutoResizeDirection
+      })
+      
+      // Update local value first
+      this.localValue = newValue
       
       // Update the content value
       this.$emit('update:content', { 
@@ -298,22 +327,67 @@ export default {
       const textarea = this.$refs.inputElement
       if (!textarea || this.effectiveAutoResizeDirection !== 'vertical') return
       
-      // Store current value to prevent loss
-      const currentValue = textarea.value
+      console.log('[DEBUG] adjustTextareaHeight called', {
+        textareaExists: !!textarea,
+        offsetParent: !!textarea.offsetParent,
+        value: textarea.value,
+        valueLength: textarea.value?.length,
+        currentHeight: textarea.style.height,
+        scrollHeight: textarea.scrollHeight
+      })
       
-      // Reset height to get accurate scrollHeight
-      textarea.style.height = 'auto'
-      
-      // Get the scroll height
-      const scrollHeight = textarea.scrollHeight
-      
-      // Set the height
-      textarea.style.height = `${scrollHeight}px`
-      
-      // Ensure value is preserved
-      if (textarea.value !== currentValue) {
-        textarea.value = currentValue
+      // Don't adjust if textarea is not in the DOM
+      if (!textarea.offsetParent) {
+        console.log('[DEBUG] Textarea not in DOM, skipping adjustment')
+        return
       }
+      
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        if (!textarea || !textarea.offsetParent) {
+          console.log('[DEBUG] Textarea lost in requestAnimationFrame')
+          return
+        }
+        
+        // Store the current value to ensure it's not lost
+        const currentValue = textarea.value
+        console.log('[DEBUG] Before height adjustment:', {
+          value: currentValue,
+          currentHeight: textarea.style.height
+        })
+        
+        // Store the current scroll position
+        const scrollTop = textarea.scrollTop
+        
+        // Temporarily remove height to measure
+        const originalHeight = textarea.style.height
+        textarea.style.height = ''
+        
+        // Get the scroll height
+        const scrollHeight = textarea.scrollHeight
+        const computedStyle = window.getComputedStyle(textarea)
+        const borderTop = parseInt(computedStyle.borderTopWidth) || 0
+        const borderBottom = parseInt(computedStyle.borderBottomWidth) || 0
+        
+        // Set the new height
+        const newHeight = scrollHeight + borderTop + borderBottom
+        textarea.style.height = `${newHeight}px`
+        
+        // Restore scroll position
+        textarea.scrollTop = scrollTop
+        
+        // Ensure value is still there
+        if (textarea.value !== currentValue) {
+          console.log('[DEBUG] VALUE LOST! Restoring:', currentValue)
+          textarea.value = currentValue
+        }
+        
+        console.log('[DEBUG] After height adjustment:', {
+          value: textarea.value,
+          newHeight: newHeight,
+          scrollHeight: scrollHeight
+        })
+      })
     },
     handleFocus(event) {
       this.isFocused = true
@@ -325,8 +399,24 @@ export default {
       })
     },
     handleBlur(event) {
+      console.log('[DEBUG] handleBlur called', {
+        targetValue: event.target.value,
+        targetTextContent: event.target.textContent,
+        contentValue: this.content.value,
+        effectiveAutoResizeDirection: this.effectiveAutoResizeDirection
+      })
+      
       this.isFocused = false
       const value = event.target.value || event.target.textContent || ''
+      
+      // For vertical mode, ensure we preserve the value
+      if (this.effectiveAutoResizeDirection === 'vertical' && event.target.value) {
+        console.log('[DEBUG] Vertical mode blur - preserving value:', event.target.value)
+        // Force a height adjustment after blur
+        this.$nextTick(() => {
+          this.adjustTextareaHeight()
+        })
+      }
       
       // Emit blur event
       this.$emit('trigger-event', {
