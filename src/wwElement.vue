@@ -298,14 +298,22 @@ export default {
       const textarea = this.$refs.inputElement
       if (!textarea || this.effectiveAutoResizeDirection !== 'vertical') return
       
+      // Store current value to prevent loss
+      const currentValue = textarea.value
+      
       // Reset height to get accurate scrollHeight
-      textarea.style.height = '1px'
+      textarea.style.height = 'auto'
       
       // Get the scroll height
       const scrollHeight = textarea.scrollHeight
       
       // Set the height
       textarea.style.height = `${scrollHeight}px`
+      
+      // Ensure value is preserved
+      if (textarea.value !== currentValue) {
+        textarea.value = currentValue
+      }
     },
     handleFocus(event) {
       this.isFocused = true
