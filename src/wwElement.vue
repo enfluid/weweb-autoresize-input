@@ -94,7 +94,7 @@ export default {
         fontFamily: this.content.fontFamily || 'inherit',
         fontWeight: this.content.fontWeight || 'normal',
         lineHeight: this.content.lineHeight || '1.2',
-        padding: this.content.padding || '1px 4px',
+        padding: this.content.padding || '0px 0px',
         borderRadius: this.content.borderRadius || '4px',
         borderWidth: this.content.borderWidth || '1px',
         borderStyle: 'solid',
