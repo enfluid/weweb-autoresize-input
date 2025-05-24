@@ -148,9 +148,11 @@ export default {
         style.overflow = 'hidden'
         style.resize = 'none'
       } else if (this.effectiveAutoResizeDirection === 'horizontal') {
-        style.height = this.content.inputHeight || '40px'
+        // Let padding determine height for horizontal mode
+        style.height = 'auto'
       } else if (!this.content.multiLine) {
-        style.height = this.content.inputHeight || '40px'
+        // Let padding determine height for single-line inputs
+        style.height = 'auto'
       }
 
       return style
@@ -364,7 +366,7 @@ export default {
 /* Fine-tune vertical centering - shift text up slightly */
 .autoresize-input,
 .contenteditable-input {
-  transform: translateY(-3px);
+  transform: translateY(1px);
 }
 
 /* Ensure textarea has no default height constraints */
