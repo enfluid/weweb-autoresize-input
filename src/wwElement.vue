@@ -6,6 +6,8 @@
       'vertical-resize': effectiveAutoResizeDirection === 'vertical',
       'editor-mode': isEditorMode
     }"
+    @click.capture="handleWrapperClick"
+    @mousedown.capture="handleWrapperMousedown"
   >
     <!-- Use contenteditable for auto-resizing like RichText -->
     <div
@@ -78,8 +80,17 @@ export default {
   computed: {
     isEditorMode() {
       // Check if we're in WeWeb editor mode
-      // WeWeb sets window.wwLib in editor mode
-      return !!(window.wwLib && window.wwLib.wwEditorState && window.wwLib.wwEditorState.isEditorMode)
+      // Multiple ways to detect editor mode for compatibility
+      if (typeof window !== 'undefined' && window.wwLib) {
+        // Check for editor state
+        if (window.wwLib.state && window.wwLib.state.editMode) return true
+        if (window.wwLib.wwEditorState && window.wwLib.wwEditorState.isEditorMode) return true
+        // Check for editor-specific properties
+        if (window.wwLib.getEditorContext) return true
+        if (window.wwLib.editor) return true
+      }
+      // Also check for edit mode in content
+      return !!(this.content && this.content.editMode)
     },
     effectiveAutoResizeDirection() {
       // Automatically determine resize direction based on multiLine setting
@@ -308,23 +319,27 @@ export default {
       const textarea = this.$refs.inputElement
       if (!textarea || this.effectiveAutoResizeDirection !== 'vertical') return
       
-      // Reset height to 0 to get the correct scrollHeight
-      textarea.style.height = '0px'
+      // Store original height
+      const originalHeight = textarea.style.height
       
-      // Calculate the new height
+      // Reset height to measure content
+      textarea.style.height = 'auto'
+      textarea.style.height = `${textarea.scrollHeight}px`
+      
+      // Apply min height
       const minHeight = parseInt(this.content.minHeight) || 40
-      const scrollHeight = textarea.scrollHeight
-      
-      // Set the new height within bounds
-      let newHeight = Math.max(scrollHeight, minHeight)
+      if (textarea.scrollHeight < minHeight) {
+        textarea.style.height = `${minHeight}px`
+      }
       
       // Only apply max height if it's set
       if (this.content.maxHeight) {
         const maxHeight = parseInt(this.content.maxHeight)
-        newHeight = Math.min(newHeight, maxHeight)
+        const currentHeight = parseInt(textarea.style.height)
+        if (currentHeight > maxHeight) {
+          textarea.style.height = `${maxHeight}px`
+        }
       }
-      
-      textarea.style.height = `${newHeight}px`
     },
     handleFocus(event) {
       this.isFocused = true
@@ -357,6 +372,20 @@ export default {
       }
       
       return { vertical: 16, horizontal: 24 }
+    },
+    handleWrapperClick(event) {
+      if (this.isEditorMode) {
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation()
+      }
+    },
+    handleWrapperMousedown(event) {
+      if (this.isEditorMode) {
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation()
+      }
     }
   }
 }
@@ -378,6 +407,8 @@ export default {
 .autoresize-wrapper.vertical-resize {
   display: block;
   width: 100%;
+  height: auto;
+  min-height: 0;
 }
 
 .autoresize-input {
@@ -388,7 +419,8 @@ export default {
 /* Ensure textarea has no default height constraints */
 textarea.autoresize-input {
   min-height: 0;
-  height: auto;
+  height: auto !important;
+  max-height: none !important;
 }
 
 .autoresize-input::placeholder {
