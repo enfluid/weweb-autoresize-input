@@ -6,8 +6,25 @@
       'vertical-resize': effectiveAutoResizeDirection === 'vertical' 
     }"
   >
-    <component 
-      :is="componentType"
+    <!-- Use contenteditable for auto-resizing like RichText -->
+    <div
+      v-if="effectiveAutoResizeDirection === 'horizontal'"
+      ref="editableElement"
+      class="autoresize-input contenteditable-input"
+      :contenteditable="!content.disabled && !content.readonly"
+      @input="handleContentEditableInput"
+      @focus="handleFocus"
+      @blur="handleBlur"
+      @paste="handlePaste"
+      @keydown="handleKeydown"
+      :style="inputStyle"
+      :data-placeholder="content.placeholder || 'Enter text...'"
+      v-text="content.value || ''"
+    ></div>
+    
+    <!-- Keep regular textarea for vertical resize -->
+    <textarea
+      v-else-if="effectiveAutoResizeDirection === 'vertical'"
       ref="inputElement"
       :value="content.value || ''"
       @input="handleInput"
@@ -19,7 +36,23 @@
       :disabled="content.disabled"
       :readonly="content.readonly"
       :maxlength="content.maxLength"
-      :rows="componentType === 'textarea' ? (content.rows || 1) : undefined"
+      :rows="content.rows || 1"
+    />
+    
+    <!-- Regular input for no resize -->
+    <input
+      v-else
+      ref="inputElement"
+      :value="content.value || ''"
+      @input="handleInput"
+      @focus="handleFocus"
+      @blur="handleBlur"
+      :placeholder="content.placeholder || 'Enter text...'"
+      :style="inputStyle"
+      :class="['autoresize-input', content.inputClass]"
+      :disabled="content.disabled"
+      :readonly="content.readonly"
+      :maxlength="content.maxLength"
     />
   </div>
 </template>
@@ -96,34 +129,13 @@ export default {
 
       // Handle width
       if (this.effectiveAutoResizeDirection === 'horizontal') {
-        // Calculate width based on character count
-        const text = this.content.value || this.content.placeholder || ''
-        
-        // Calculate character width based on font size
-        const fontSize = parseInt(this.content.fontSize || '16')
-        const charWidth = fontSize * 0.6 // Approximate character width ratio
-        
-        // Parse padding
-        const paddingValue = this.content.padding || '8px 12px'
-        const paddingParts = paddingValue.split(' ')
-        let horizontalPadding = 0
-        if (paddingParts.length === 1) {
-          horizontalPadding = parseInt(paddingParts[0]) * 2
-        } else if (paddingParts.length >= 2) {
-          horizontalPadding = parseInt(paddingParts[1]) * 2
-        }
-        
-        const border = parseInt(this.content.borderWidth || '1') * 2
-        const extraSpace = parseInt(this.content.horizontalPadding || '5')
-        
-        // Calculate total width
-        const calculatedWidth = (text.length * charWidth) + horizontalPadding + border + extraSpace
-        
-        // Apply constraints
-        const minWidth = parseInt(this.content.minWidth) || 50
-        const maxWidth = parseInt(this.content.maxWidth) || 500
-        
-        style.width = `${Math.min(Math.max(calculatedWidth, minWidth), maxWidth)}px`
+        // For contenteditable, let it auto-size
+        style.display = 'inline-block'
+        style.minWidth = this.content.minWidth || '50px'
+        style.maxWidth = this.content.maxWidth || '100%'
+        style.whiteSpace = 'nowrap'
+        style.overflow = 'hidden'
+        style.textOverflow = 'ellipsis'
       } else {
         style.width = '100%'
       }
@@ -151,6 +163,12 @@ export default {
       setTimeout(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          // Set initial content for contenteditable
+          const editable = this.$refs.editableElement
+          if (editable && editable.textContent !== this.content.value) {
+            editable.textContent = this.content.value || ''
+          }
         }
       }, 50)
     })
@@ -160,6 +178,12 @@ export default {
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          // Update contenteditable if value changed externally
+          const editable = this.$refs.editableElement
+          if (editable && editable.textContent !== this.content.value) {
+            editable.textContent = this.content.value || ''
+          }
         }
       })
     },
@@ -196,6 +220,70 @@ export default {
           this.adjustTextareaHeight()
         }
       })
+    },
+    handleContentEditableInput(event) {
+      // Get plain text content only
+      const text = event.target.textContent || ''
+      
+      // Update the content value
+      this.$emit('update:content', { 
+        ...this.content, 
+        value: text 
+      })
+      
+      // Trigger input event for workflows
+      this.$emit('trigger-event', {
+        name: 'input',
+        event: {
+          value: text,
+          length: text.length
+        }
+      })
+    },
+    handlePaste(event) {
+      // Prevent formatted paste - only allow plain text
+      event.preventDefault()
+      
+      const text = (event.clipboardData || window.clipboardData).getData('text/plain')
+      
+      // Insert plain text at cursor position
+      const selection = window.getSelection()
+      if (!selection.rangeCount) return
+      
+      selection.deleteFromDocument()
+      selection.getRangeAt(0).insertNode(document.createTextNode(text))
+      
+      // Move cursor to end of inserted text
+      selection.collapseToEnd()
+      
+      // Trigger input event
+      this.handleContentEditableInput({ target: event.target })
+    },
+    handleKeydown(event) {
+      // Prevent Enter key in single-line mode
+      if (event.key === 'Enter' && this.effectiveAutoResizeDirection === 'horizontal') {
+        event.preventDefault()
+        
+        // Trigger blur to simulate form submission
+        event.target.blur()
+        
+        // Trigger enter event for workflows
+        this.$emit('trigger-event', {
+          name: 'enter',
+          event: {
+            value: event.target.textContent || ''
+          }
+        })
+      }
+      
+      // Handle max length
+      if (this.content.maxLength && event.target.textContent.length >= this.content.maxLength) {
+        // Allow backspace, delete, arrow keys
+        const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+        if (!allowedKeys.includes(event.key)) {
+          event.preventDefault()
+        }
+      }
     },
     adjustTextareaHeight() {
       const textarea = this.$refs.inputElement
@@ -279,5 +367,32 @@ export default {
 .autoresize-input:disabled {
   -webkit-text-fill-color: currentColor;
   opacity: 1;
+}
+
+/* Contenteditable styles */
+.contenteditable-input {
+  outline: none;
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contenteditable-input:empty:before {
+  content: attr(data-placeholder);
+  color: #999;
+  pointer-events: none;
+}
+
+.contenteditable-input[contenteditable="false"] {
+  cursor: default;
+}
+
+/* Prevent text selection in disabled state */
+.contenteditable-input[contenteditable="false"] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 </style>
