@@ -6,14 +6,6 @@
       'vertical-resize': effectiveAutoResizeDirection === 'vertical' 
     }"
   >
-    <!-- Hidden span for measuring text width -->
-    <span 
-      v-if="effectiveAutoResizeDirection === 'horizontal'"
-      class="size-detector"
-      :style="sizeDetectorStyle"
-      ref="sizeDetector"
-    >{{ displayText }}</span>
-    
     <component 
       :is="componentType"
       ref="inputElement"
@@ -28,6 +20,7 @@
       :readonly="content.readonly"
       :maxlength="content.maxLength"
       :rows="componentType === 'textarea' ? (content.rows || 1) : undefined"
+      :size="effectiveAutoResizeDirection === 'horizontal' ? inputSize : undefined"
     />
   </div>
 </template>
@@ -48,7 +41,7 @@ export default {
   data() {
     return {
       isFocused: false,
-      computedWidth: this.content.minWidth || '100px'
+      inputSize: 20
     }
   },
   computed: {
@@ -64,28 +57,6 @@ export default {
       if (this.effectiveAutoResizeDirection === 'vertical') return 'textarea'
       if (this.effectiveAutoResizeDirection === 'horizontal') return 'input'
       return this.content.multiLine ? 'textarea' : 'input'
-    },
-    displayText() {
-      // Text to display in the size detector
-      return this.content.value || this.content.placeholder || ''
-    },
-    sizeDetectorStyle() {
-      // Style for the hidden size detector span
-      return {
-        position: 'absolute',
-        visibility: 'hidden',
-        height: 'auto',
-        width: 'auto',
-        whiteSpace: 'pre',
-        fontSize: this.content.fontSize || '16px',
-        fontFamily: this.content.fontFamily || 'inherit',
-        fontWeight: this.content.fontWeight || 'normal',
-        lineHeight: this.content.lineHeight || 'normal',
-        padding: this.content.padding || '8px 12px',
-        border: `${this.content.borderWidth || '1px'} solid transparent`,
-        boxSizing: 'border-box',
-        overflow: 'hidden'
-      }
     },
     inputStyle() {
       const style = {
@@ -125,11 +96,10 @@ export default {
         style.backgroundColor = this.content.readonlyBackgroundColor || '#fafafa'
       }
 
-      // Handle horizontal auto-resizing
+      // Handle width
       if (this.effectiveAutoResizeDirection === 'horizontal') {
-        style.width = this.computedWidth
-        style.minWidth = this.content.minWidth || '0px'
-        style.maxWidth = this.content.maxWidth || '100%'
+        // Size attribute will handle the width
+        style.width = 'auto'
       } else {
         style.width = '100%'
       }
@@ -181,14 +151,6 @@ export default {
           this.updateInputWidth()
         }
       })
-    },
-    displayText() {
-      // Watch for changes in the display text
-      if (this.effectiveAutoResizeDirection === 'horizontal') {
-        this.$nextTick(() => {
-          this.updateInputWidth()
-        })
-      }
     }
   },
   methods: {
@@ -222,59 +184,19 @@ export default {
     updateInputWidth() {
       if (this.effectiveAutoResizeDirection !== 'horizontal') return
       
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        const detector = this.$refs.sizeDetector
-        if (!detector) {
-          console.warn('Size detector not found')
-          this.computedWidth = 'auto'
-          return
-        }
-        
-        // Force layout calculation
-        const rect = detector.getBoundingClientRect()
-        const width = rect.width || detector.offsetWidth || detector.scrollWidth
-        
-        if (width === 0) {
-          console.warn('Size detector has 0 width')
-          // Try alternative measurement
-          const tempSpan = document.createElement('span')
-          Object.assign(tempSpan.style, this.sizeDetectorStyle)
-          tempSpan.style.position = 'absolute'
-          tempSpan.style.visibility = 'hidden'
-          tempSpan.style.height = 'auto'
-          tempSpan.style.width = 'auto'
-          tempSpan.textContent = this.displayText
-          document.body.appendChild(tempSpan)
-          const measuredWidth = tempSpan.offsetWidth
-          document.body.removeChild(tempSpan)
-          
-          if (measuredWidth > 0) {
-            const extraPadding = parseInt(this.content.horizontalPadding) || 5
-            const totalWidth = measuredWidth + extraPadding
-            
-            // Apply constraints
-            const minWidth = parseInt(this.content.minWidth) || 0
-            const maxWidth = parseInt(this.content.maxWidth) || 9999
-            
-            const finalWidth = Math.min(Math.max(totalWidth, minWidth), maxWidth)
-            this.computedWidth = `${finalWidth}px`
-          } else {
-            this.computedWidth = 'auto'
-          }
-          return
-        }
-        
-        const extraPadding = parseInt(this.content.horizontalPadding) || 5
-        const totalWidth = width + extraPadding
-        
-        // Apply constraints
-        const minWidth = parseInt(this.content.minWidth) || 0
-        const maxWidth = parseInt(this.content.maxWidth) || 9999
-        
-        const finalWidth = Math.min(Math.max(totalWidth, minWidth), maxWidth)
-        this.computedWidth = `${finalWidth}px`
-      }, 10)
+      // Calculate size based on text length
+      const text = this.content.value || this.content.placeholder || ''
+      const length = text.length
+      
+      // Add some extra characters for padding
+      const extraChars = 2
+      
+      // Set minimum and maximum size
+      const minSize = 1
+      const maxSize = 100
+      
+      // Calculate the size attribute
+      this.inputSize = Math.min(Math.max(length + extraChars, minSize), maxSize)
     },
     adjustTextareaHeight() {
       const textarea = this.$refs.inputElement
@@ -332,30 +254,12 @@ export default {
 .autoresize-wrapper {
   display: inline-block;
   width: 100%;
-  position: relative;
 }
 
 /* Horizontal auto-sizing */
 .autoresize-wrapper.horizontal-resize {
   display: inline-block;
   width: auto;
-  position: relative;
-}
-
-.autoresize-wrapper.horizontal-resize .autoresize-input {
-  display: inline-block;
-}
-
-.autoresize-wrapper.horizontal-resize .size-detector {
-  position: fixed;
-  top: 0;
-  left: 0;
-  visibility: hidden;
-  height: auto;
-  width: auto;
-  white-space: pre;
-  pointer-events: none;
-  z-index: -1;
 }
 
 .autoresize-wrapper.vertical-resize {
