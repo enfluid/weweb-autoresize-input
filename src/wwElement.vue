@@ -48,7 +48,7 @@ export default {
   data() {
     return {
       isFocused: false,
-      computedWidth: 'auto'
+      computedWidth: this.content.minWidth || '100px'
     }
   },
   computed: {
@@ -222,16 +222,49 @@ export default {
     updateInputWidth() {
       if (this.effectiveAutoResizeDirection !== 'horizontal') return
       
-      const detector = this.$refs.sizeDetector
-      if (!detector) {
-        // Fallback if detector not available
-        this.computedWidth = 'auto'
-        return
-      }
-      
-      // Use requestAnimationFrame for better performance
-      requestAnimationFrame(() => {
-        const width = detector.offsetWidth
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const detector = this.$refs.sizeDetector
+        if (!detector) {
+          console.warn('Size detector not found')
+          this.computedWidth = 'auto'
+          return
+        }
+        
+        // Force layout calculation
+        const rect = detector.getBoundingClientRect()
+        const width = rect.width || detector.offsetWidth || detector.scrollWidth
+        
+        if (width === 0) {
+          console.warn('Size detector has 0 width')
+          // Try alternative measurement
+          const tempSpan = document.createElement('span')
+          Object.assign(tempSpan.style, this.sizeDetectorStyle)
+          tempSpan.style.position = 'absolute'
+          tempSpan.style.visibility = 'hidden'
+          tempSpan.style.height = 'auto'
+          tempSpan.style.width = 'auto'
+          tempSpan.textContent = this.displayText
+          document.body.appendChild(tempSpan)
+          const measuredWidth = tempSpan.offsetWidth
+          document.body.removeChild(tempSpan)
+          
+          if (measuredWidth > 0) {
+            const extraPadding = parseInt(this.content.horizontalPadding) || 5
+            const totalWidth = measuredWidth + extraPadding
+            
+            // Apply constraints
+            const minWidth = parseInt(this.content.minWidth) || 0
+            const maxWidth = parseInt(this.content.maxWidth) || 9999
+            
+            const finalWidth = Math.min(Math.max(totalWidth, minWidth), maxWidth)
+            this.computedWidth = `${finalWidth}px`
+          } else {
+            this.computedWidth = 'auto'
+          }
+          return
+        }
+        
         const extraPadding = parseInt(this.content.horizontalPadding) || 5
         const totalWidth = width + extraPadding
         
@@ -241,7 +274,7 @@ export default {
         
         const finalWidth = Math.min(Math.max(totalWidth, minWidth), maxWidth)
         this.computedWidth = `${finalWidth}px`
-      })
+      }, 10)
     },
     adjustTextareaHeight() {
       const textarea = this.$refs.inputElement
@@ -314,12 +347,15 @@ export default {
 }
 
 .autoresize-wrapper.horizontal-resize .size-detector {
-  position: absolute;
-  top: -9999px;
-  left: -9999px;
+  position: fixed;
+  top: 0;
+  left: 0;
   visibility: hidden;
+  height: auto;
+  width: auto;
   white-space: pre;
   pointer-events: none;
+  z-index: -1;
 }
 
 .autoresize-wrapper.vertical-resize {
