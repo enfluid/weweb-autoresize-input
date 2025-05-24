@@ -94,7 +94,7 @@ export default {
         fontFamily: this.content.fontFamily || 'inherit',
         fontWeight: this.content.fontWeight || 'normal',
         lineHeight: this.content.lineHeight || '1.2',
-        padding: this.content.padding || '8px 12px',
+        padding: this.content.padding || '6px 12px',
         borderRadius: this.content.borderRadius || '4px',
         borderWidth: this.content.borderWidth || '1px',
         borderStyle: 'solid',
@@ -359,6 +359,12 @@ export default {
   box-sizing: border-box;
   vertical-align: middle;
   line-height: 1.2;
+}
+
+/* Fine-tune vertical centering - shift text up slightly */
+.autoresize-input,
+.contenteditable-input {
+  transform: translateY(-1px);
 }
 
 /* Ensure textarea has no default height constraints */
