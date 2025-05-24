@@ -93,7 +93,7 @@ export default {
         fontSize: this.content.fontSize || '16px',
         fontFamily: this.content.fontFamily || 'inherit',
         fontWeight: this.content.fontWeight || 'normal',
-        lineHeight: this.content.lineHeight || 'normal',
+        lineHeight: this.content.lineHeight || '1.2',
         padding: this.content.padding || '8px 12px',
         borderRadius: this.content.borderRadius || '4px',
         borderWidth: this.content.borderWidth || '1px',
@@ -357,6 +357,8 @@ export default {
 .autoresize-input {
   font-family: inherit;
   box-sizing: border-box;
+  vertical-align: middle;
+  line-height: 1.2;
 }
 
 /* Ensure textarea has no default height constraints */
@@ -381,6 +383,8 @@ textarea.autoresize-input {
   cursor: text;
   max-width: 100%;
   word-break: keep-all;
+  line-height: 1.2;
+  vertical-align: middle;
 }
 
 /* Hide scrollbar for contenteditable but keep scroll functionality */
