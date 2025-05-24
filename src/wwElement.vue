@@ -71,7 +71,8 @@ export default {
   emits: ['update:content', 'trigger-event'],
   data() {
     return {
-      isFocused: false
+      isFocused: false,
+      debounceTimer: null
     }
   },
   computed: {
@@ -216,13 +217,8 @@ export default {
         }
       })
       
-      // Trigger change event for workflows
-      this.$emit('trigger-event', {
-        name: 'change',
-        event: {
-          value: newValue
-        }
-      })
+      // Trigger change event (with debounce if configured)
+      this.triggerChangeEvent(newValue)
       
       // Handle auto-resize
       this.$nextTick(() => {
@@ -250,13 +246,8 @@ export default {
         }
       })
       
-      // Trigger change event for workflows
-      this.$emit('trigger-event', {
-        name: 'change',
-        event: {
-          value: text
-        }
-      })
+      // Trigger change event (with debounce if configured)
+      this.triggerChangeEvent(text)
     },
     handlePaste(event) {
       // Prevent formatted paste - only allow plain text
@@ -350,6 +341,40 @@ export default {
       }
       
       return { vertical: 16, horizontal: 24 }
+    },
+    triggerChangeEvent(value) {
+      // Clear existing timer if any
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer)
+      }
+      
+      const debounceDelay = this.content.debounce || 0
+      
+      if (debounceDelay > 0) {
+        // Set up debounced change event
+        this.debounceTimer = setTimeout(() => {
+          this.$emit('trigger-event', {
+            name: 'change',
+            event: {
+              value: value
+            }
+          })
+        }, debounceDelay)
+      } else {
+        // No debounce, trigger immediately
+        this.$emit('trigger-event', {
+          name: 'change',
+          event: {
+            value: value
+          }
+        })
+      }
+    }
+  },
+  beforeUnmount() {
+    // Clean up timer on component destroy
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer)
     }
   }
 }

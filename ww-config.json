@@ -321,6 +321,20 @@
       "type": "Text",
       "defaultValue": "",
       "section": "attributes"
+    },
+    "debounce": {
+      "label": {
+        "en": "Debounce (ms)",
+        "fr": "Debounce (ms)"
+      },
+      "type": "Number",
+      "defaultValue": 0,
+      "section": "settings",
+      "options": {
+        "min": 0,
+        "max": 5000,
+        "step": 100
+      }
     }
   },
   "triggerEvents": [
