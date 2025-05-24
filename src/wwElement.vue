@@ -216,6 +216,14 @@ export default {
         }
       })
       
+      // Trigger change event for workflows
+      this.$emit('trigger-event', {
+        name: 'change',
+        event: {
+          value: newValue
+        }
+      })
+      
       // Handle auto-resize
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
@@ -239,6 +247,14 @@ export default {
         event: {
           value: text,
           length: text.length
+        }
+      })
+      
+      // Trigger change event for workflows
+      this.$emit('trigger-event', {
+        name: 'change',
+        event: {
+          value: text
         }
       })
     },
@@ -311,10 +327,13 @@ export default {
     },
     handleBlur(event) {
       this.isFocused = false
+      const value = event.target.value || event.target.textContent || ''
+      
+      // Emit blur event
       this.$emit('trigger-event', {
         name: 'blur',
         event: {
-          value: event.target.value
+          value: value
         }
       })
     },

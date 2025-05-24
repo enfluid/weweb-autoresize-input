@@ -354,6 +354,16 @@
       "event": {
         "value": "string"
       }
+    },
+    {
+      "name": "change",
+      "label": {
+        "en": "On change",
+        "fr": "Sur changement"
+      },
+      "event": {
+        "value": "string"
+      }
     }
   ]
 }
