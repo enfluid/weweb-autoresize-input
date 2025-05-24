@@ -11,7 +11,7 @@
       v-if="effectiveAutoResizeDirection === 'horizontal'"
       ref="editableElement"
       class="autoresize-input contenteditable-input"
-      :contenteditable="!content.disabled && !content.readonly"
+      :contenteditable="!isEditorMode && !content.disabled && !content.readonly"
       @input="handleContentEditableInput"
       @focus="handleFocus"
       @blur="handleBlur"
@@ -33,8 +33,8 @@
       :placeholder="content.placeholder || 'Enter text...'"
       :style="inputStyle"
       :class="['autoresize-input', content.inputClass]"
-      :disabled="content.disabled"
-      :readonly="content.readonly"
+      :disabled="isEditorMode || content.disabled"
+      :readonly="isEditorMode || content.readonly"
       :maxlength="content.maxLength"
       :rows="content.rows || 1"
     />
@@ -50,8 +50,8 @@
       :placeholder="content.placeholder || 'Enter text...'"
       :style="inputStyle"
       :class="['autoresize-input', content.inputClass]"
-      :disabled="content.disabled"
-      :readonly="content.readonly"
+      :disabled="isEditorMode || content.disabled"
+      :readonly="isEditorMode || content.readonly"
       :maxlength="content.maxLength"
     />
   </div>
@@ -76,6 +76,11 @@ export default {
     }
   },
   computed: {
+    isEditorMode() {
+      // Check if we're in WeWeb editor mode
+      // WeWeb sets window.wwLib in editor mode
+      return !!(window.wwLib && window.wwLib.wwEditorState && window.wwLib.wwEditorState.isEditorMode)
+    },
     effectiveAutoResizeDirection() {
       // Automatically determine resize direction based on multiLine setting
       if (this.content.autoResizeDirection === 'none') return 'none'
@@ -114,6 +119,12 @@ export default {
         maxWidth: this.content.maxWidth || '100%'
       }
 
+      // Apply editor mode styles
+      if (this.isEditorMode) {
+        style.pointerEvents = 'none'
+        style.cursor = 'default'
+      }
+
       // Apply disabled styles
       if (this.content.disabled) {
         style.opacity = '0.6'
@@ -129,8 +140,9 @@ export default {
 
       // Handle width
       if (this.effectiveAutoResizeDirection === 'horizontal') {
-        // For contenteditable, let it auto-size
+        // For contenteditable, let it auto-size within bounds
         style.display = 'inline-block'
+        style.width = 'auto'
         style.minWidth = this.content.minWidth || '50px'
         style.maxWidth = this.content.maxWidth || '100%'
         style.whiteSpace = 'nowrap'
@@ -143,7 +155,9 @@ export default {
       // Handle vertical auto-resizing for textareas
       if (this.effectiveAutoResizeDirection === 'vertical') {
         style.minHeight = this.content.minHeight || '40px'
-        style.maxHeight = this.content.maxHeight || '200px'
+        if (this.content.maxHeight) {
+          style.maxHeight = this.content.maxHeight
+        }
         style.resize = 'none'
         style.overflow = 'auto'
         style.overflowX = 'hidden'
@@ -294,11 +308,17 @@ export default {
       
       // Calculate the new height
       const minHeight = parseInt(this.content.minHeight) || 40
-      const maxHeight = parseInt(this.content.maxHeight) || 200
       const scrollHeight = textarea.scrollHeight
       
       // Set the new height within bounds
-      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight)
+      let newHeight = Math.max(scrollHeight, minHeight)
+      
+      // Only apply max height if it's set
+      if (this.content.maxHeight) {
+        const maxHeight = parseInt(this.content.maxHeight)
+        newHeight = Math.min(newHeight, maxHeight)
+      }
+      
       textarea.style.height = `${newHeight}px`
     },
     handleFocus(event) {
@@ -347,6 +367,7 @@ export default {
 .autoresize-wrapper.horizontal-resize {
   display: inline-block;
   width: auto;
+  max-width: 100%;
 }
 
 .autoresize-wrapper.vertical-resize {
@@ -394,5 +415,11 @@ export default {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* Editor mode styles */
+.autoresize-wrapper .autoresize-input[disabled],
+.autoresize-wrapper .contenteditable-input[contenteditable="false"] {
+  pointer-events: none !important;
 }
 </style>
