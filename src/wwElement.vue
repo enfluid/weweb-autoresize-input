@@ -3,7 +3,8 @@
     class="autoresize-wrapper"
     :class="{ 
       'horizontal-resize': effectiveAutoResizeDirection === 'horizontal',
-      'vertical-resize': effectiveAutoResizeDirection === 'vertical' 
+      'vertical-resize': effectiveAutoResizeDirection === 'vertical',
+      'editor-mode': isEditorMode
     }"
   >
     <!-- Use contenteditable for auto-resizing like RichText -->
@@ -36,7 +37,6 @@
       :disabled="isEditorMode || content.disabled"
       :readonly="isEditorMode || content.readonly"
       :maxlength="content.maxLength"
-      :rows="content.rows || 1"
     />
     
     <!-- Regular input for no resize -->
@@ -308,8 +308,8 @@ export default {
       const textarea = this.$refs.inputElement
       if (!textarea || this.effectiveAutoResizeDirection !== 'vertical') return
       
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = 'auto'
+      // Reset height to 0 to get the correct scrollHeight
+      textarea.style.height = '0px'
       
       // Calculate the new height
       const minHeight = parseInt(this.content.minHeight) || 40
@@ -385,6 +385,12 @@ export default {
   box-sizing: border-box;
 }
 
+/* Ensure textarea has no default height constraints */
+textarea.autoresize-input {
+  min-height: 0;
+  height: auto;
+}
+
 .autoresize-input::placeholder {
   color: #999;
   opacity: 1;
@@ -427,8 +433,28 @@ export default {
 }
 
 /* Editor mode styles */
+.autoresize-wrapper.editor-mode {
+  pointer-events: none !important;
+  position: relative;
+}
+
+.autoresize-wrapper.editor-mode::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  cursor: default;
+}
+
 .autoresize-wrapper .autoresize-input[disabled],
 .autoresize-wrapper .contenteditable-input[contenteditable="false"] {
   pointer-events: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
 }
 </style>
