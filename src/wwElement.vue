@@ -146,8 +146,11 @@ export default {
         style.minWidth = this.content.minWidth || '50px'
         style.maxWidth = this.content.maxWidth || '100%'
         style.whiteSpace = 'nowrap'
-        style.overflow = 'hidden'
-        style.textOverflow = 'ellipsis'
+        style.overflowX = 'auto'
+        style.overflowY = 'hidden'
+        // Hide scrollbar but keep scroll functionality
+        style.scrollbarWidth = 'none'
+        style.msOverflowStyle = 'none'
       } else {
         style.width = '100%'
       }
@@ -157,9 +160,11 @@ export default {
         style.minHeight = this.content.minHeight || '40px'
         if (this.content.maxHeight) {
           style.maxHeight = this.content.maxHeight
+          style.overflowY = 'auto'
+        } else {
+          style.overflowY = 'hidden'
         }
         style.resize = 'none'
-        style.overflow = 'auto'
         style.overflowX = 'hidden'
       } else if (this.effectiveAutoResizeDirection === 'horizontal') {
         style.height = this.content.inputHeight || '40px'
@@ -394,9 +399,13 @@ export default {
 .contenteditable-input {
   outline: none;
   cursor: text;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 100%;
+  word-break: keep-all;
+}
+
+/* Hide scrollbar for contenteditable but keep scroll functionality */
+.contenteditable-input::-webkit-scrollbar {
+  display: none;
 }
 
 .contenteditable-input:empty:before {
