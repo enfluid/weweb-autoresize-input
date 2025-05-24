@@ -3,18 +3,15 @@
     class="autoresize-wrapper"
     :class="{ 
       'horizontal-resize': effectiveAutoResizeDirection === 'horizontal',
-      'vertical-resize': effectiveAutoResizeDirection === 'vertical',
-      'editor-mode': isEditorMode
+      'vertical-resize': effectiveAutoResizeDirection === 'vertical'
     }"
-    @click.capture="handleWrapperClick"
-    @mousedown.capture="handleWrapperMousedown"
   >
     <!-- Use contenteditable for auto-resizing like RichText -->
     <div
       v-if="effectiveAutoResizeDirection === 'horizontal'"
       ref="editableElement"
       class="autoresize-input contenteditable-input"
-      :contenteditable="!isEditorMode && !content.disabled && !content.readonly"
+      :contenteditable="!content.disabled && !content.readonly"
       @input="handleContentEditableInput"
       @focus="handleFocus"
       @blur="handleBlur"
@@ -36,8 +33,8 @@
       :placeholder="content.placeholder || 'Enter text...'"
       :style="inputStyle"
       :class="['autoresize-input', content.inputClass]"
-      :disabled="isEditorMode || content.disabled"
-      :readonly="isEditorMode || content.readonly"
+      :disabled="content.disabled"
+      :readonly="content.readonly"
       :maxlength="content.maxLength"
     />
     
@@ -52,8 +49,8 @@
       :placeholder="content.placeholder || 'Enter text...'"
       :style="inputStyle"
       :class="['autoresize-input', content.inputClass]"
-      :disabled="isEditorMode || content.disabled"
-      :readonly="isEditorMode || content.readonly"
+      :disabled="content.disabled"
+      :readonly="content.readonly"
       :maxlength="content.maxLength"
     />
   </div>
@@ -78,31 +75,6 @@ export default {
     }
   },
   computed: {
-    isEditorMode() {
-      // Check if we're in WeWeb editor mode (not preview mode)
-      try {
-        if (typeof window !== 'undefined' && window.wwLib) {
-          // Check for preview mode first - if in preview, definitely not editor
-          if (window.location && window.location.pathname && window.location.pathname.includes('/preview')) {
-            return false
-          }
-          
-          // Check manager.isEditor - most reliable indicator
-          if (window.wwLib.manager && typeof window.wwLib.manager.isEditor === 'boolean') {
-            return window.wwLib.manager.isEditor
-          }
-          
-          // Fallback: check if we can find editor-specific UI elements
-          if (document.querySelector('.ww-editor-panel') || document.querySelector('[data-ww-editor]')) {
-            return true
-          }
-        }
-      } catch (error) {
-        // If any error occurs, default to allowing interaction
-        console.error('Error detecting editor mode:', error)
-      }
-      return false
-    },
     effectiveAutoResizeDirection() {
       // Automatically determine resize direction based on multiLine setting
       if (this.content.autoResizeDirection === 'none') return 'none'
@@ -141,12 +113,6 @@ export default {
         maxWidth: this.content.maxWidth || '100%'
       }
 
-      // Apply editor mode styles
-      if (this.isEditorMode) {
-        style.pointerEvents = 'none'
-        style.cursor = 'default'
-      }
-
       // Apply disabled styles
       if (this.content.disabled) {
         style.opacity = '0.6'
@@ -179,15 +145,8 @@ export default {
 
       // Handle vertical auto-resizing for textareas
       if (this.effectiveAutoResizeDirection === 'vertical') {
-        style.minHeight = this.content.minHeight || '40px'
-        if (this.content.maxHeight) {
-          style.maxHeight = this.content.maxHeight
-          style.overflowY = 'auto'
-        } else {
-          style.overflowY = 'hidden'
-        }
+        style.overflow = 'hidden'
         style.resize = 'none'
-        style.overflowX = 'hidden'
       } else if (this.effectiveAutoResizeDirection === 'horizontal') {
         style.height = this.content.inputHeight || '40px'
       } else if (!this.content.multiLine) {
@@ -330,27 +289,14 @@ export default {
       const textarea = this.$refs.inputElement
       if (!textarea || this.effectiveAutoResizeDirection !== 'vertical') return
       
-      // Store original height
-      const originalHeight = textarea.style.height
+      // Reset height to get accurate scrollHeight
+      textarea.style.height = '1px'
       
-      // Reset height to measure content
-      textarea.style.height = 'auto'
-      textarea.style.height = `${textarea.scrollHeight}px`
+      // Get the scroll height
+      const scrollHeight = textarea.scrollHeight
       
-      // Apply min height
-      const minHeight = parseInt(this.content.minHeight) || 40
-      if (textarea.scrollHeight < minHeight) {
-        textarea.style.height = `${minHeight}px`
-      }
-      
-      // Only apply max height if it's set
-      if (this.content.maxHeight) {
-        const maxHeight = parseInt(this.content.maxHeight)
-        const currentHeight = parseInt(textarea.style.height)
-        if (currentHeight > maxHeight) {
-          textarea.style.height = `${maxHeight}px`
-        }
-      }
+      // Set the height
+      textarea.style.height = `${scrollHeight}px`
     },
     handleFocus(event) {
       this.isFocused = true
@@ -383,20 +329,6 @@ export default {
       }
       
       return { vertical: 16, horizontal: 24 }
-    },
-    handleWrapperClick(event) {
-      if (this.isEditorMode) {
-        event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation()
-      }
-    },
-    handleWrapperMousedown(event) {
-      if (this.isEditorMode) {
-        event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation()
-      }
     }
   }
 }
@@ -429,8 +361,7 @@ export default {
 
 /* Ensure textarea has no default height constraints */
 textarea.autoresize-input {
-  min-height: 0;
-  height: auto !important;
+  min-height: 1px;
   max-height: none !important;
 }
 
@@ -475,29 +406,4 @@ textarea.autoresize-input {
   user-select: none;
 }
 
-/* Editor mode styles */
-.autoresize-wrapper.editor-mode {
-  pointer-events: none !important;
-  position: relative;
-}
-
-.autoresize-wrapper.editor-mode::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 999;
-  cursor: default;
-}
-
-.autoresize-wrapper .autoresize-input[disabled],
-.autoresize-wrapper .contenteditable-input[contenteditable="false"] {
-  pointer-events: none !important;
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-}
 </style>
