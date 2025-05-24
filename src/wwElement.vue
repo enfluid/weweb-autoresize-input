@@ -20,7 +20,6 @@
       :readonly="content.readonly"
       :maxlength="content.maxLength"
       :rows="componentType === 'textarea' ? (content.rows || 1) : undefined"
-      :size="effectiveAutoResizeDirection === 'horizontal' ? inputSize : undefined"
     />
   </div>
 </template>
@@ -40,8 +39,7 @@ export default {
   emits: ['update:content', 'trigger-event'],
   data() {
     return {
-      isFocused: false,
-      inputSize: 20
+      isFocused: false
     }
   },
   computed: {
@@ -98,8 +96,34 @@ export default {
 
       // Handle width
       if (this.effectiveAutoResizeDirection === 'horizontal') {
-        // Size attribute will handle the width
-        style.width = 'auto'
+        // Calculate width based on character count
+        const text = this.content.value || this.content.placeholder || ''
+        
+        // Calculate character width based on font size
+        const fontSize = parseInt(this.content.fontSize || '16')
+        const charWidth = fontSize * 0.6 // Approximate character width ratio
+        
+        // Parse padding
+        const paddingValue = this.content.padding || '8px 12px'
+        const paddingParts = paddingValue.split(' ')
+        let horizontalPadding = 0
+        if (paddingParts.length === 1) {
+          horizontalPadding = parseInt(paddingParts[0]) * 2
+        } else if (paddingParts.length >= 2) {
+          horizontalPadding = parseInt(paddingParts[1]) * 2
+        }
+        
+        const border = parseInt(this.content.borderWidth || '1') * 2
+        const extraSpace = parseInt(this.content.horizontalPadding || '5')
+        
+        // Calculate total width
+        const calculatedWidth = (text.length * charWidth) + horizontalPadding + border + extraSpace
+        
+        // Apply constraints
+        const minWidth = parseInt(this.content.minWidth) || 50
+        const maxWidth = parseInt(this.content.maxWidth) || 500
+        
+        style.width = `${Math.min(Math.max(calculatedWidth, minWidth), maxWidth)}px`
       } else {
         style.width = '100%'
       }
@@ -127,8 +151,6 @@ export default {
       setTimeout(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
-        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
-          this.updateInputWidth()
         }
       }, 50)
     })
@@ -138,8 +160,6 @@ export default {
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
-        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
-          this.updateInputWidth()
         }
       })
     },
@@ -147,8 +167,6 @@ export default {
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
-        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
-          this.updateInputWidth()
         }
       })
     }
@@ -176,27 +194,8 @@ export default {
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
-        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
-          this.updateInputWidth()
         }
       })
-    },
-    updateInputWidth() {
-      if (this.effectiveAutoResizeDirection !== 'horizontal') return
-      
-      // Calculate size based on text length
-      const text = this.content.value || this.content.placeholder || ''
-      const length = text.length
-      
-      // Add some extra characters for padding
-      const extraChars = 2
-      
-      // Set minimum and maximum size
-      const minSize = 1
-      const maxSize = 100
-      
-      // Calculate the size attribute
-      this.inputSize = Math.min(Math.max(length + extraChars, minSize), maxSize)
     },
     adjustTextareaHeight() {
       const textarea = this.$refs.inputElement
