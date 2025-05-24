@@ -79,18 +79,29 @@ export default {
   },
   computed: {
     isEditorMode() {
-      // Check if we're in WeWeb editor mode
-      // Multiple ways to detect editor mode for compatibility
-      if (typeof window !== 'undefined' && window.wwLib) {
-        // Check for editor state
-        if (window.wwLib.state && window.wwLib.state.editMode) return true
-        if (window.wwLib.wwEditorState && window.wwLib.wwEditorState.isEditorMode) return true
-        // Check for editor-specific properties
-        if (window.wwLib.getEditorContext) return true
-        if (window.wwLib.editor) return true
+      // Check if we're in WeWeb editor mode (not preview mode)
+      try {
+        if (typeof window !== 'undefined' && window.wwLib) {
+          // Check for preview mode first - if in preview, definitely not editor
+          if (window.location && window.location.pathname && window.location.pathname.includes('/preview')) {
+            return false
+          }
+          
+          // Check manager.isEditor - most reliable indicator
+          if (window.wwLib.manager && typeof window.wwLib.manager.isEditor === 'boolean') {
+            return window.wwLib.manager.isEditor
+          }
+          
+          // Fallback: check if we can find editor-specific UI elements
+          if (document.querySelector('.ww-editor-panel') || document.querySelector('[data-ww-editor]')) {
+            return true
+          }
+        }
+      } catch (error) {
+        // If any error occurs, default to allowing interaction
+        console.error('Error detecting editor mode:', error)
       }
-      // Also check for edit mode in content
-      return !!(this.content && this.content.editMode)
+      return false
     },
     effectiveAutoResizeDirection() {
       // Automatically determine resize direction based on multiLine setting
