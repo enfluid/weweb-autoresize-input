@@ -5,9 +5,15 @@
       'horizontal-resize': effectiveAutoResizeDirection === 'horizontal',
       'vertical-resize': effectiveAutoResizeDirection === 'vertical' 
     }"
-    :data-value="effectiveAutoResizeDirection === 'horizontal' ? (content.value || content.placeholder || '') : ''"
-    :style="wrapperStyle"
   >
+    <!-- Hidden span for measuring text width -->
+    <span 
+      v-if="effectiveAutoResizeDirection === 'horizontal'"
+      class="size-detector"
+      :style="sizeDetectorStyle"
+      ref="sizeDetector"
+    >{{ displayText }}</span>
+    
     <component 
       :is="componentType"
       ref="inputElement"
@@ -41,7 +47,8 @@ export default {
   emits: ['update:content', 'trigger-event'],
   data() {
     return {
-      isFocused: false
+      isFocused: false,
+      computedWidth: 'auto'
     }
   },
   computed: {
@@ -58,19 +65,27 @@ export default {
       if (this.effectiveAutoResizeDirection === 'horizontal') return 'input'
       return this.content.multiLine ? 'textarea' : 'input'
     },
-    wrapperStyle() {
-      // Pass styles as CSS custom properties for the pseudo-element
-      if (this.effectiveAutoResizeDirection === 'horizontal') {
-        return {
-          '--font-size': this.content.fontSize || '16px',
-          '--font-family': this.content.fontFamily || 'inherit',
-          '--font-weight': this.content.fontWeight || 'normal',
-          '--line-height': this.content.lineHeight || 'normal',
-          '--padding': this.content.padding || '8px 12px',
-          '--border-width': this.content.borderWidth || '1px'
-        }
+    displayText() {
+      // Text to display in the size detector
+      return this.content.value || this.content.placeholder || ''
+    },
+    sizeDetectorStyle() {
+      // Style for the hidden size detector span
+      return {
+        position: 'absolute',
+        visibility: 'hidden',
+        height: 'auto',
+        width: 'auto',
+        whiteSpace: 'pre',
+        fontSize: this.content.fontSize || '16px',
+        fontFamily: this.content.fontFamily || 'inherit',
+        fontWeight: this.content.fontWeight || 'normal',
+        lineHeight: this.content.lineHeight || 'normal',
+        padding: this.content.padding || '8px 12px',
+        border: `${this.content.borderWidth || '1px'} solid transparent`,
+        boxSizing: 'border-box',
+        overflow: 'hidden'
       }
-      return {}
     },
     inputStyle() {
       const style = {
@@ -112,8 +127,7 @@ export default {
 
       // Handle horizontal auto-resizing
       if (this.effectiveAutoResizeDirection === 'horizontal') {
-        // Let CSS Grid handle the sizing
-        style.width = '100%'
+        style.width = this.computedWidth
         style.minWidth = this.content.minWidth || '0px'
         style.maxWidth = this.content.maxWidth || '100%'
       } else {
@@ -143,6 +157,8 @@ export default {
       setTimeout(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.updateInputWidth()
         }
       }, 50)
     })
@@ -152,6 +168,8 @@ export default {
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.updateInputWidth()
         }
       })
     },
@@ -159,8 +177,18 @@ export default {
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.updateInputWidth()
         }
       })
+    },
+    displayText() {
+      // Watch for changes in the display text
+      if (this.effectiveAutoResizeDirection === 'horizontal') {
+        this.$nextTick(() => {
+          this.updateInputWidth()
+        })
+      }
     }
   },
   methods: {
@@ -186,7 +214,33 @@ export default {
       this.$nextTick(() => {
         if (this.effectiveAutoResizeDirection === 'vertical') {
           this.adjustTextareaHeight()
+        } else if (this.effectiveAutoResizeDirection === 'horizontal') {
+          this.updateInputWidth()
         }
+      })
+    },
+    updateInputWidth() {
+      if (this.effectiveAutoResizeDirection !== 'horizontal') return
+      
+      const detector = this.$refs.sizeDetector
+      if (!detector) {
+        // Fallback if detector not available
+        this.computedWidth = 'auto'
+        return
+      }
+      
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        const width = detector.offsetWidth
+        const extraPadding = parseInt(this.content.horizontalPadding) || 5
+        const totalWidth = width + extraPadding
+        
+        // Apply constraints
+        const minWidth = parseInt(this.content.minWidth) || 0
+        const maxWidth = parseInt(this.content.maxWidth) || 9999
+        
+        const finalWidth = Math.min(Math.max(totalWidth, minWidth), maxWidth)
+        this.computedWidth = `${finalWidth}px`
       })
     },
     adjustTextareaHeight() {
@@ -248,43 +302,24 @@ export default {
   position: relative;
 }
 
-/* Horizontal auto-sizing using CSS Grid */
+/* Horizontal auto-sizing */
 .autoresize-wrapper.horizontal-resize {
-  display: inline-grid;
-  align-items: center;
+  display: inline-block;
   width: auto;
   position: relative;
 }
 
-.autoresize-wrapper.horizontal-resize::after {
-  content: attr(data-value);
-  visibility: hidden;
-  white-space: pre;
-  grid-area: 1 / 1 / 2 / 2;
-  
-  /* Copy text styles from input */
-  font: inherit;
-  font-size: var(--font-size, 16px);
-  font-family: var(--font-family, inherit);
-  font-weight: var(--font-weight, normal);
-  line-height: var(--line-height, normal);
-  
-  /* Copy spacing styles */
-  padding: var(--padding, 8px 12px);
-  padding-right: calc(var(--padding, 8px 12px) + 5px); /* Extra space for cursor */
-  border: var(--border-width, 1px) solid transparent;
-  box-sizing: border-box;
-  
-  /* Ensure proper sizing */
-  width: auto;
-  min-width: 0;
-  overflow: hidden;
+.autoresize-wrapper.horizontal-resize .autoresize-input {
+  display: inline-block;
 }
 
-.autoresize-wrapper.horizontal-resize .autoresize-input {
-  grid-area: 1 / 1 / 2 / 2;
-  width: 100%;
-  min-width: 0;
+.autoresize-wrapper.horizontal-resize .size-detector {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  visibility: hidden;
+  white-space: pre;
+  pointer-events: none;
 }
 
 .autoresize-wrapper.vertical-resize {
